@@ -2,6 +2,7 @@
 #include "IHashEngine.h"
 #include "BcryptEngine.h"
 #include "Crc32Engine.h"
+#include "Crc64Engine.h"
 #include <memory>
 #include <string>
 #include <algorithm>
@@ -14,6 +15,7 @@ public:
         std::transform(algoName.begin(), algoName.end(), algoName.begin(), ::toupper);
 
         if (algoName == "CRC32") return std::make_unique<Crc32Engine>();
+        if (algoName == "CRC64") return std::make_unique<Crc64Engine>();
 
 #ifdef _WIN32
         // Map common string names to Windows Bcrypt identifiers

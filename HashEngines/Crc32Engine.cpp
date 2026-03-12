@@ -32,7 +32,6 @@ void Crc32Engine::update(const char* data, size_t size) {
     }
 }
 
-// 结算并输出 8 位的十六进制字符串
 // Finalize and output an 8-digit hexadecimal string
 std::string Crc32Engine::finalize() {
     uint32_t final_crc = current_crc ^ 0xFFFFFFFF;

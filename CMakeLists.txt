@@ -15,7 +15,7 @@ if(MSVC)
     add_compile_options(/utf-8)
 endif()
 
-add_executable (HashOwl   "main.cpp"   "HashEngines/IHashEngine.h" "HashEngines/HashUtils.h" "HashEngines/HashUtils.cpp" "HashEngines/BcryptEngine.h" "HashEngines/BcryptEngine.cpp" "HashEngines/HashFactory.h" "Scanner/Scanner.h" "Scanner/Scanner.cpp" "HashEngines/Crc32Engine.h" "HashEngines/Crc32Engine.cpp")
+add_executable (HashOwl   "main.cpp"   "HashEngines/IHashEngine.h" "HashEngines/HashUtils.h" "HashEngines/HashUtils.cpp" "HashEngines/BcryptEngine.h" "HashEngines/BcryptEngine.cpp" "HashEngines/HashFactory.h" "Scanner/Scanner.h" "Scanner/Scanner.cpp" "HashEngines/Crc32Engine.h" "HashEngines/Crc32Engine.cpp" "HashEngines/Crc64Engine.h" "HashEngines/Crc64Engine.cpp")
 
 include(FetchContent)
 
