@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (targetPathStr.empty()) {
-        std::cerr << "❌ [ERROR] Missing path. Usage: HashOwl.exe <path> [--algo <md5|sha1|sha256|sha512>] [-o [output_path]]\n";
+        std::cerr << "❌ [ERROR] Missing path. Usage: HashOwl.exe <path> [--algo <md5|sha1|sha256|sha512|crc32>] [-o [output_path]]\n";
         return 1;
     }
 

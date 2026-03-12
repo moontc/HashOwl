@@ -1,6 +1,7 @@
 #pragma once
 #include "IHashEngine.h"
 #include "BcryptEngine.h"
+#include "Crc32Engine.h"
 #include <memory>
 #include <string>
 #include <algorithm>
@@ -11,6 +12,8 @@ public:
     static std::unique_ptr<IHashEngine> create(std::string algoName) {
         // Convert to uppercase for easy matching
         std::transform(algoName.begin(), algoName.end(), algoName.begin(), ::toupper);
+
+        if (algoName == "CRC32") return std::make_unique<Crc32Engine>();
 
 #ifdef _WIN32
         // Map common string names to Windows Bcrypt identifiers

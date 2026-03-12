@@ -16,7 +16,9 @@ BcryptEngine::BcryptEngine(const std::wstring& algoId) : hAlg(nullptr), hHash(nu
 
     // 2. Query the exact hash length for this algorithm
     ULONG result = 0;
-    BCryptGetProperty((BCRYPT_ALG_HANDLE)hAlg, BCRYPT_HASH_LENGTH, (PUCHAR)&hashLength, sizeof(hashLength), &result, 0);
+    if (BCryptGetProperty((BCRYPT_ALG_HANDLE)hAlg, BCRYPT_HASH_LENGTH, (PUCHAR)&hashLength, sizeof(hashLength), &result, 0) != 0) {
+        throw std::runtime_error("Failed to query hash length from Bcrypt.");
+    }
 
     // 3. Create the hash object
     if (BCryptCreateHash((BCRYPT_ALG_HANDLE)hAlg, (BCRYPT_HASH_HANDLE*)&hHash, NULL, 0, NULL, 0, 0) != 0) {
