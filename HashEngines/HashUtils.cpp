@@ -2,7 +2,7 @@
 #include <fstream>
 #include <vector>
 
-std::string calculate_file_hash(const std::filesystem::path& filepath, std::unique_ptr<IHashEngine> engine) {
+std::string calculate_file_hash(const std::filesystem::path& filepath, std::unique_ptr<IHashEngine> engine, std::atomic<uint64_t>& processed_bytes) {
     std::ifstream file(filepath, std::ios::binary);
     if (!file) {
         throw std::runtime_error("Failed to open file (Permission denied or locked): " + filepath.string());
@@ -13,6 +13,8 @@ std::string calculate_file_hash(const std::filesystem::path& filepath, std::uniq
 
     while (file.read(buffer.data(), buffer.size()) || file.gcount() > 0) {
         engine->update(buffer.data(), file.gcount());
+
+        processed_bytes.fetch_add(file.gcount(), std::memory_order_relaxed);
     }
     return engine->finalize();
 }

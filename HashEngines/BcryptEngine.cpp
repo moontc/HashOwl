@@ -32,12 +32,12 @@ BcryptEngine::~BcryptEngine() {
 }
 
 void BcryptEngine::update(const char* data, size_t size) {
-    BCryptHashData((BCRYPT_HASH_HANDLE)hHash, (PUCHAR)data, (ULONG)size, 0);
+    (void)BCryptHashData((BCRYPT_HASH_HANDLE)hHash, (PUCHAR)data, (ULONG)size, 0);
 }
 
 std::string BcryptEngine::finalize() {
     std::vector<BYTE> hash(hashLength);
-    BCryptFinishHash((BCRYPT_HASH_HANDLE)hHash, hash.data(), (ULONG)hash.size(), 0);
+    (void)BCryptFinishHash((BCRYPT_HASH_HANDLE)hHash, hash.data(), (ULONG)hash.size(), 0);
 
     std::string hexStr;
     char buf[3];

@@ -16,7 +16,7 @@ std::string path_to_utf8(const fs::path& p) {
     return std::string(reinterpret_cast<const char*>(u8_str.c_str()), u8_str.size());
 }
 
-json scan_directory(const fs::path& dir_path, const std::string& algo_name) {
+json scan_directory(const fs::path& dir_path, const std::string& algo_name, std::atomic<uint64_t>& processed_bytes) {
     json dir_json = json::object();
     std::vector<std::string> child_hashes;
 
@@ -31,7 +31,7 @@ json scan_directory(const fs::path& dir_path, const std::string& algo_name) {
 
         if (entry.is_directory()) {
             // To avoid thread starvation on deep folders, we keep directories synchronous
-            json sub_dir = scan_directory(entry.path(), algo_name);
+            json sub_dir = scan_directory(entry.path(), algo_name, processed_bytes);
             dir_json[name] = sub_dir;
 
             child_hashes.push_back(name + ":" + sub_dir["__hash__"].get<std::string>());
@@ -40,10 +40,10 @@ json scan_directory(const fs::path& dir_path, const std::string& algo_name) {
             // Dispatch the heavy lifting to a background thread
             fs::path target_path = entry.path();
 
-            file_futures.emplace_back(name, std::async(std::launch::async, [target_path, algo_name]() {
+            file_futures.emplace_back(name, std::async(std::launch::async, [target_path, algo_name, &processed_bytes]() {
                 auto engine = HashFactory::create(algo_name);
-                return calculate_file_hash(target_path, std::move(engine));
-            }));
+                return calculate_file_hash(target_path, std::move(engine), processed_bytes);
+                }));
         }
     }
 

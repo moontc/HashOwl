@@ -17,14 +17,4 @@ endif()
 
 add_executable (HashOwl   "main.cpp"   "HashEngines/IHashEngine.h" "HashEngines/HashUtils.h" "HashEngines/HashUtils.cpp" "HashEngines/BcryptEngine.h" "HashEngines/BcryptEngine.cpp" "HashEngines/HashFactory.h" "Scanner/Scanner.h" "Scanner/Scanner.cpp"     "HashEngines/CrcEngine.h")
 
-include(FetchContent)
-
-message(STATUS "🦉 HashOwl is fetching nlohmann/json...")
-FetchContent_Declare(
-    json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG        v3.11.3
-)
-FetchContent_MakeAvailable(json)
-
-target_link_libraries(HashOwl PRIVATE nlohmann_json::nlohmann_json bcrypt)
+target_link_libraries(HashOwl PRIVATE bcrypt)
