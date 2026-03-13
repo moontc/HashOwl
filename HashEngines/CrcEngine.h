@@ -5,45 +5,81 @@
 #include <array>
 #include <iomanip>
 #include <sstream>
+#include <cstring>
 
-// 🌟 核心魔法：接收数据类型 T 和 多项式 Polynomial 作为模板参数
 template <typename T, T Polynomial>
 class CrcEngine : public IHashEngine {
 private:
     T current_crc;
 
-    // 泛型编译期查表生成器
-    static constexpr std::array<T, 256> generate_table() {
-        std::array<T, 256> table{};
+    // generate 8 lookup tables (8 x 256)
+    static constexpr std::array<std::array<T, 256>, 8> generate_tables() {
+        std::array<std::array<T, 256>, 8> tables{};
+
+        // Generate the first table (base table)
         for (size_t i = 0; i < 256; i++) {
             T c = static_cast<T>(i);
             for (int j = 0; j < 8; j++) {
                 if (c & 1) c = Polynomial ^ (c >> 1);
                 else c >>= 1;
             }
-            table.at(i) = c;
+            tables[0][i] = c;
         }
-        return table;
+
+        // Generate the remaining 7 tables (each derived from the previous by advancing 8 bits)
+        for (size_t i = 0; i < 256; i++) {
+            for (size_t t = 1; t < 8; t++) {
+                tables[t][i] = (tables[t - 1][i] >> 8) ^ tables[0][tables[t - 1][i] & 0xFF];
+            }
+        }
+        return tables;
     }
 
-    // 利用 inline 变量特性（C++17），在类内直接初始化静态常量表
-    static constexpr std::array<T, 256> crc_table = generate_table();
+    static constexpr std::array<std::array<T, 256>, 8> crc_tables = generate_tables();
 
 public:
-    // 构造时，32位全1和64位全1都可以用 ~(T)0 完美泛化表达！
     CrcEngine() : current_crc(~static_cast<T>(0)) {}
 
     ~CrcEngine() override = default;
 
-    // 核心绞肉机：没有任何 if 判断，纯享极致算力
     void update(const char* data, size_t size) override {
-        const auto* bytes = reinterpret_cast<const uint8_t*>(data);
-        for (size_t i = 0; i < size; ++i) {
-            current_crc = crc_table[(current_crc ^ bytes[i]) & 0xFF] ^ (current_crc >> 8);
+        const auto* ptr = reinterpret_cast<const uint8_t*>(data);
+
+        // process 8 bytes at a time
+        size_t chunks = size / 8;
+        size_t remainder = size % 8;
+
+        for (size_t i = 0; i < chunks; ++i) {
+            uint64_t chunk;
+            // 完美避开严格别名规则，现代编译器会自动优化为一条 64 位读取指令！
+            // Safely avoids strict aliasing; modern compilers will optimize this to a single 64-bit load.
+            std::memcpy(&chunk, ptr, sizeof(chunk));
+            ptr += 8;
+
+            // 将当前的 CRC 状态混入这 8 个字节中
+            // Mix the current CRC state into these 8 bytes
+            chunk ^= static_cast<uint64_t>(current_crc);
+
+            // 🌟 八线并行查表：8 张表同时提供算力！
+            // 8-way parallel table lookups — all 8 tables contribute to the computation!
+            current_crc =
+                crc_tables[7][(chunk) & 0xFF] ^
+                crc_tables[6][(chunk >> 8) & 0xFF] ^
+                crc_tables[5][(chunk >> 16) & 0xFF] ^
+                crc_tables[4][(chunk >> 24) & 0xFF] ^
+                crc_tables[3][(chunk >> 32) & 0xFF] ^
+                crc_tables[2][(chunk >> 40) & 0xFF] ^
+                crc_tables[1][(chunk >> 48) & 0xFF] ^
+                crc_tables[0][(chunk >> 56) & 0xFF];
+        }
+
+        // 处理最后凑不够 8 个字节的零头（比如文件大小是 10 字节，最后 2 字节在这里算）
+        // handle the tail bytes fewer than 8 (e.g. file size 10 bytes, the last 2 bytes are handled here)
+        for (size_t i = 0; i < remainder; ++i) {
+            current_crc = crc_tables[0][(current_crc ^ ptr[i]) & 0xFF] ^ (current_crc >> 8);
         }
     }
 
-    // 结算输出：根据 T 的大小自动决定输出 8 位还是 16 位字符
     std::string finalize() override {
         T final_crc = current_crc ^ (~static_cast<T>(0));
 
