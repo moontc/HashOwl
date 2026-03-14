@@ -18,7 +18,7 @@ The development of HashOwl is highly active. Here are the core objectives planne
 ### Prerequisites
 
 - **OS:** Windows (Relies on native `bcrypt.lib` now)
-- **Compiler:** C++20 compatible compiler (MSVC recommended)
+- **Compiler:** Must MSVC now
 - **Engine:** CMake 3.14 or newer
 
 *(Note: Third-party dependencies `nlohmann/json` and `indicators`)*

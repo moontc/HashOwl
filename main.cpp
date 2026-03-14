@@ -155,7 +155,7 @@ int main(int argc, char* argv[]) {
         show_console_cursor(false);
 
         // Launch a background monitoring panel thread
-        std::thread ui_thread([&]() {
+        std::jthread ui_thread([&]() {
             auto start_time = std::chrono::high_resolution_clock::now();
             auto last_time = start_time;
             uint64_t last_bytes = 0;

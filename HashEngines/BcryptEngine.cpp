@@ -39,11 +39,11 @@ std::string BcryptEngine::finalize() {
     std::vector<BYTE> hash(hashLength);
     (void)BCryptFinishHash((BCRYPT_HASH_HANDLE)hHash, hash.data(), (ULONG)hash.size(), 0);
 
-    std::string hexStr;
-    char buf[3];
-    for (BYTE b : hash) {
-        snprintf(buf, sizeof(buf), "%02x", b);
-        hexStr += buf;
+    static const char hex_chars[] = "0123456789abcdef";
+    std::string hexStr(hash.size() * 2, '0');
+    for (size_t i = 0; i < hash.size(); ++i) {
+        hexStr[i * 2] = hex_chars[(hash[i] >> 4) & 0x0F];
+        hexStr[i * 2 + 1] = hex_chars[hash[i] & 0x0F];
     }
     return hexStr;
 }

@@ -83,8 +83,16 @@ public:
     std::string finalize() override {
         T final_crc = current_crc ^ (~static_cast<T>(0));
 
-        std::stringstream ss;
-        ss << std::hex << std::setfill('0') << std::setw(sizeof(T) * 2) << final_crc;
-        return ss.str();
+        constexpr size_t hex_len = sizeof(T) * 2;
+        std::string hexStr(hex_len, '0');
+
+        static const char hex_chars[] = "0123456789abcdef";
+
+        for (size_t i = 0; i < hex_len; ++i) {
+            size_t shift_amount = (hex_len - 1 - i) * 4;
+            hexStr[i] = hex_chars[(final_crc >> shift_amount) & 0x0F];
+        }
+
+        return hexStr;
     }
 };
