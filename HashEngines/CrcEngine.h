@@ -51,16 +51,13 @@ public:
 
         for (size_t i = 0; i < chunks; ++i) {
             uint64_t chunk;
-            // 完美避开严格别名规则，现代编译器会自动优化为一条 64 位读取指令！
             // Safely avoids strict aliasing; modern compilers will optimize this to a single 64-bit load.
             std::memcpy(&chunk, ptr, sizeof(chunk));
             ptr += 8;
 
-            // 将当前的 CRC 状态混入这 8 个字节中
             // Mix the current CRC state into these 8 bytes
             chunk ^= static_cast<uint64_t>(current_crc);
 
-            // 🌟 八线并行查表：8 张表同时提供算力！
             // 8-way parallel table lookups — all 8 tables contribute to the computation!
             current_crc =
                 crc_tables[7][(chunk) & 0xFF] ^
@@ -73,7 +70,6 @@ public:
                 crc_tables[0][(chunk >> 56) & 0xFF];
         }
 
-        // 处理最后凑不够 8 个字节的零头（比如文件大小是 10 字节，最后 2 字节在这里算）
         // handle the tail bytes fewer than 8 (e.g. file size 10 bytes, the last 2 bytes are handled here)
         for (size_t i = 0; i < remainder; ++i) {
             current_crc = crc_tables[0][(current_crc ^ ptr[i]) & 0xFF] ^ (current_crc >> 8);

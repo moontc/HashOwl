@@ -2,7 +2,7 @@
 
 **HashOwl** is a high-performance, multithreaded command-line tool written in modern C++, designed for lightning-fast hash calculation and absolute file integrity verification. It natively supports a wide range of hash algorithms and outputs the computation results as a structured JSON report, serving as the definitive baseline for verification. When targeting a directory, HashOwl acts as a cryptographic tree builder: the exported JSON file will comprehensively store the individual hashes of all nested files, the aggregated hashes of all subdirectories, and the ultimate global hash of the entire target directory.
 
-> ⚠️ **Notice:** This project is currently a work in progress. Currently, HashOwl calculates hashes but does not yet perform integrity verification. Features and APIs may change rapidly.
+> ⚠️ **Notice:** HashOwl is a work in progress, currently requiring MSVC on Windows. It supports hash calculation, with integrity verification coming soon. Expect frequent changes to features and APIs.
 
 ## 🗺️ Roadmap
 
