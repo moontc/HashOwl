@@ -10,6 +10,7 @@
 
 SimdCrc32cEngine::SimdCrc32cEngine() : current_crc(0xFFFFFFFF) {}
 
+// TODO: 流水线交错 / ILP 并行计算
 void SimdCrc32cEngine::update(const char* data, size_t size) {
     // 如果是 ARM 或者 32 位系统，这里会被跳过（由工厂保证不会调用）
 #if defined(_M_X64) || defined(__x86_64__)
