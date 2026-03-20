@@ -1,6 +1,6 @@
 #include "Scanner.h"
-#include "../HashEngines/HashFactory.h"
-#include "../HashEngines/HashUtils.h"
+#include "HashEngines/HashFactory.h"
+#include "HashEngines/HashUtils.h"
 #include <iostream>
 #include <vector>
 #include <algorithm>

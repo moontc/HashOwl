@@ -38,13 +38,18 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/ebiggers/libdeflate.git
     GIT_TAG        v1.19
 )
-
 set(LIBDEFLATE_BUILD_GZIP OFF CACHE BOOL "" FORCE)
 set(LIBDEFLATE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(LIBDEFLATE_BUILD_SHARED_LIB OFF CACHE BOOL "" FORCE)
-
 FetchContent_MakeAvailable(libdeflate)
 
-add_executable (HashOwl   "main.cpp"   "HashEngines/IHashEngine.h" "HashEngines/HashUtils.h" "HashEngines/HashUtils.cpp" "HashEngines/BcryptEngine.h" "HashEngines/BcryptEngine.cpp" "HashEngines/HashFactory.h" "Scanner/Scanner.h" "Scanner/Scanner.cpp"     "HashEngines/CrcEngine.h" "HashEngines/SimdCrc32cEngine.h" "HashEngines/SimdCrc32cEngine.cpp" "HashEngines/LibDeflateCrc32Engine.h")
+include_directories(${libdeflate_SOURCE_DIR})
 
-target_link_libraries(HashOwl PRIVATE libdeflate_static bcrypt)
+option(HASHOWL_BUILD_TESTS "Build Google Benchmark tests" ON)
+
+add_subdirectory(src)
+
+if(HASHOWL_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
