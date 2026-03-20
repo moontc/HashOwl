@@ -31,6 +31,20 @@ endif()
 # Enable Link Time Code Generation (LTCG) requires setting target property for whole program optimization
 set_property(DIRECTORY PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 
-add_executable (HashOwl   "main.cpp"   "HashEngines/IHashEngine.h" "HashEngines/HashUtils.h" "HashEngines/HashUtils.cpp" "HashEngines/BcryptEngine.h" "HashEngines/BcryptEngine.cpp" "HashEngines/HashFactory.h" "Scanner/Scanner.h" "Scanner/Scanner.cpp"     "HashEngines/CrcEngine.h" "HashEngines/SimdCrc32cEngine.h" "HashEngines/SimdCrc32cEngine.cpp")
+include(FetchContent)
 
-target_link_libraries(HashOwl PRIVATE bcrypt)
+FetchContent_Declare(
+    libdeflate
+    GIT_REPOSITORY https://github.com/ebiggers/libdeflate.git
+    GIT_TAG        v1.19
+)
+
+set(LIBDEFLATE_BUILD_GZIP OFF CACHE BOOL "" FORCE)
+set(LIBDEFLATE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(LIBDEFLATE_BUILD_SHARED_LIB OFF CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(libdeflate)
+
+add_executable (HashOwl   "main.cpp"   "HashEngines/IHashEngine.h" "HashEngines/HashUtils.h" "HashEngines/HashUtils.cpp" "HashEngines/BcryptEngine.h" "HashEngines/BcryptEngine.cpp" "HashEngines/HashFactory.h" "Scanner/Scanner.h" "Scanner/Scanner.cpp"     "HashEngines/CrcEngine.h" "HashEngines/SimdCrc32cEngine.h" "HashEngines/SimdCrc32cEngine.cpp" "HashEngines/LibDeflateCrc32Engine.h")
+
+target_link_libraries(HashOwl PRIVATE libdeflate_static bcrypt)

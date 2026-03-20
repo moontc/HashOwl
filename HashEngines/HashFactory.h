@@ -3,6 +3,7 @@
 #include "BcryptEngine.h"
 #include "CrcEngine.h"
 #include "SimdCrc32cEngine.h"
+#include "LibDeflateCrc32Engine.h"
 #include <memory>
 #include <string>
 #include <algorithm>
@@ -25,7 +26,7 @@ public:
         // Convert to uppercase for easy matching
         std::transform(algoName.begin(), algoName.end(), algoName.begin(), ::toupper);
 
-        if (algoName == "CRC32") return std::make_unique<CrcEngine<uint32_t, 0xEDB88320>>();
+        if (algoName == "CRC32") return std::make_unique<LibDeflateCrc32Engine>();
         if (algoName == "CRC64") return std::make_unique<CrcEngine<uint64_t, 0xC96C5795D7870F42ULL>>();
 
         if (algoName == "CRC32C") {

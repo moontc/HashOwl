@@ -10,7 +10,6 @@
 
 SimdCrc32cEngine::SimdCrc32cEngine() : current_crc(0xFFFFFFFF) {}
 
-// TODO: 流水线交错 / ILP 并行计算
 void SimdCrc32cEngine::update(const char* data, size_t size) {
     // 如果是 ARM 或者 32 位系统，这里会被跳过（由工厂保证不会调用）
 #if defined(_M_X64) || defined(__x86_64__)
@@ -51,9 +50,16 @@ void SimdCrc32cEngine::update(const char* data, size_t size) {
 }
 
 std::string SimdCrc32cEngine::finalize() {
-    current_crc ^= 0xFFFFFFFF;
+    uint32_t final_crc = current_crc ^ 0xFFFFFFFF;
 
-    std::stringstream ss;
-    ss << std::hex << std::setw(8) << std::setfill('0') << current_crc;
-    return ss.str();
+    constexpr size_t hex_len = 8;
+    std::string hexStr(hex_len, '0');
+    static const char hex_chars[] = "0123456789abcdef";
+
+    for (size_t i = 0; i < hex_len; ++i) {
+        size_t shift_amount = (hex_len - 1 - i) * 4;
+        hexStr[i] = hex_chars[(final_crc >> shift_amount) & 0x0F];
+    }
+
+    return hexStr;
 }
