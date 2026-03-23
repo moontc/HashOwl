@@ -25,8 +25,8 @@ json scan_directory(const fs::path& dir_path, const std::string& algo_name, std:
     for (const auto& entry : fs::directory_iterator(dir_path)) {
         std::string name = path_to_utf8(entry.path().filename());
 
-        if (name == "__hash__") {
-            throw std::runtime_error("Security Violation: Found file/folder named '__hash__', which conflicts with internal metadata.");
+        if (name.length() >= 4 && name.substr(0, 2) == "__" && name.substr(name.length() - 2) == "__") {
+            throw std::runtime_error("Security Violation: Found file/folder '" + name + "', which conflicts with internal metadata.");
         }
 
         if (entry.is_directory()) {

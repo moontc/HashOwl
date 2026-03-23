@@ -9,7 +9,7 @@ set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
 set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googlebenchmark)
 
-add_executable(HashOwl_Benchmark benchmark_crc.cpp ${CMAKE_SOURCE_DIR}/src/HashEngines/BcryptEngine.cpp)
+add_executable(HashOwl_Benchmark benchmark_crc.cpp ${CMAKE_SOURCE_DIR}/src/HashEngines/BcryptEngine.cpp ${CMAKE_SOURCE_DIR}/src/HashEngines/SimdCrc32cEngine.cpp)
 
 target_link_libraries(HashOwl_Benchmark PRIVATE benchmark::benchmark libdeflate_static bcrypt)
 

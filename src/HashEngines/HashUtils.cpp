@@ -33,8 +33,6 @@ std::string calculate_file_hash(const std::filesystem::path& filepath, std::uniq
 
     DWORD bytesRead = 0;
 
-    // 传统而狂暴的 ReadFile 循环
-    // 此时，上下文切换从每 1GB 260,000次，骤降到每 1GB 仅需 128次！
     while (ReadFile(hFile, buffer.data(), BUFFER_SIZE, &bytesRead, NULL) && bytesRead > 0) {
 
         engine->update(buffer.data(), bytesRead);

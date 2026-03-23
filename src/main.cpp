@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
 
-        if (arg == "--algo") {
+        if (arg == "-algo") {
             // Check if there is a next argument AND it isn't another command flag
             if (i + 1 < argc && std::string(argv[i + 1]).find("-") != 0) {
                 selectedAlgo = argv[++i];
@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (targetPathStr.empty()) {
-        std::cerr << "❌ [ERROR] Missing path. Usage: HashOwl.exe <path> [--algo <md5|sha1|sha256|sha512|crc32>] [-o [output_path]]\n";
+        std::cerr << "❌ [ERROR] Missing path.\n";
         return 1;
     }
 
@@ -215,9 +215,31 @@ int main(int argc, char* argv[]) {
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> diff = end - start;
 
+        std::cout << "⏱️ Total Time: " << std::fixed << std::setprecision(2) << diff.count() << " seconds\n";
+
+        // 注入 JSON 元数据 (Metadata)
+        // 1. 获取当前时间并格式化
+        auto now = std::chrono::system_clock::now();
+        std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+        std::stringstream ss_time;
+        ss_time << std::put_time(std::localtime(&now_time), "%Y-%m-%d %H:%M:%S");
+
+        // 2. 写入根级 JSON 属性
+        result["__algo__"] = selectedAlgo;            // 记录使用的算法 [cite: 107]
+        result["__timestamp__"] = ss_time.str();      // 记录扫描时间
+        result["__total_files__"] = total_files;      // 记录总文件数 [cite: 124]
+        result["__total_bytes__"] = total_bytes;      // 记录总字节数 [cite: 124]
+
+        // 如果是扫描单个文件，额外记录原始文件名
+        if (fs::is_regular_file(targetPath)) {
+            result["__target_type__"] = "file";
+        }
+        else {
+            result["__target_type__"] = "directory";
+        }
+
         // Print the final result in a consistent format
         std::cout << "\n✅ Final Hash (" << selectedAlgo << "): " << result["__hash__"].get<std::string>() << "\n";
-        std::cout << "⏱️ Total Time: " << std::fixed << std::setprecision(2) << diff.count() << " seconds\n";
 
         // Handle optional JSON export logic
         if (exportJson) {
