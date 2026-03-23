@@ -1,14 +1,13 @@
 # 🦉 HashOwl
 
-**HashOwl** is a high-performance, multithreaded command-line tool written in modern C++, designed for lightning-fast hash calculation and absolute file integrity verification. It natively supports a wide range of hash algorithms and outputs the computation results as a structured JSON report, serving as the definitive baseline for verification. When targeting a directory, HashOwl acts as a cryptographic tree builder: the exported JSON file will comprehensively store the individual hashes of all nested files, the aggregated hashes of all subdirectories, and the ultimate global hash of the entire target directory.
+**HashOwl** is a high-performance, multithreaded command-line tool written in modern C++, designed for fast hash calculation and absolute file integrity verification. It natively supports a wide range of hash algorithms and outputs the computation results as a structured JSON report, serving as the definitive baseline for verification. When targeting a directory, HashOwl acts as a cryptographic tree builder: the exported JSON file will comprehensively store the individual hashes of all nested files, the aggregated hashes of all subdirectories, and the ultimate global hash of the entire target directory.
 
-> ⚠️ **Notice:** HashOwl is a work in progress, currently requiring MSVC on Windows. It supports hash calculation, with integrity verification coming soon. Expect frequent changes to features and APIs.
+> ⚠️ **Notice:** HashOwl is a work in progress, currently requiring MSVC on Windows. Expect frequent changes to features and APIs.
 
 ## 🗺️ Roadmap
 
 The development of HashOwl is highly active. Here are the core objectives planned for future releases:
 
-* **File Integrity Verification Engine:** Implement the core verification logic to read an exported JSON hash tree and validate it against the current state of the filesystem, automatically highlighting modified, missing, or newly added files.
 * **Extreme Performance Optimization:** Push hardware to its absolute limits
 * **Seamless Cross-Platform Support:** Ensure native compilation and flawless execution across Linux and macOS.
 * **Expanded Cryptographic Arsenal:** Support a wider range of hashing algorithms
@@ -35,7 +34,7 @@ cmake --build . --config Release
 ## 🛠️ Usage
 
 ```bash
-HashOwl.exe <path> [--algo <md5|sha1|sha256|sha384|sha512|crc32|crc64>] [-o [output_path]]
+HashOwl.exe <path> [--algo <md5|sha1|sha256|sha384|sha512|crc32|crc64>] [-o [output_path]] [--verify <snapshot.json>]
 ```
 
 ### Examples
@@ -59,4 +58,25 @@ HashOwl.exe C:\path\to\folder -o
 **4. Export JSON to a specific custom directory/file:**
 ```bash
 HashOwl.exe C:\path\to\folder -o C:\custom\output\path.json
+```
+
+**5. Verify a directory against an exported JSON snapshot:**
+```bash
+HashOwl.exe C:\path\to\folder --verify C:\path\to\folder_hashowl.json
+```
+
+**Sample Verification Output:**
+```text
+📊 Verification Report:
+------------------------------------------------
+✅ Passed:    1042 files
+❌ Modified:  2 files
+   - config\settings.ini
+   - data\pagefile.sys [READ ERROR]
+⚠️ Missing:   1 files
+   - docs\old_readme.md
+🔍 Untracked: 5 files
+   - temp\new_cache.tmp
+------------------------------------------------
+⏱️ Total Time: 0.45 seconds
 ```
