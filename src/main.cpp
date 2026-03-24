@@ -172,7 +172,8 @@ void run_generate_mode(const fs::path& targetPath, const std::string& selectedAl
         result["__hash__"] = hash;
     }
     else if (fs::is_directory(targetPath)) {
-        result = scan_directory(targetPath, selectedAlgo, processed_bytes);
+        ThreadPool pool;
+        result = scan_directory(targetPath, selectedAlgo, processed_bytes, pool);
     }
 
     // 安全退出子线程
