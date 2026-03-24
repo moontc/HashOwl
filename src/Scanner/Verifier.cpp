@@ -3,6 +3,8 @@
 #include "HashEngines/HashUtils.h"
 #include <unordered_set>
 #include <iostream>
+#include <mutex>
+#include <future>
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
@@ -26,7 +28,7 @@ static fs::path utf8_to_path(const std::string& utf8_str) {
 }
 
 // 递归遍历 JSON 节点
-static void verify_recursive(const json& current_node, const fs::path& current_path, const std::string& algo, VerifyReport& report, std::unordered_set<std::string>& visited_paths, std::atomic<uint64_t>& processed_bytes) {
+static void verify_recursive(const json& current_node, const fs::path& current_path, const std::string& algo, VerifyReport& report, std::unordered_set<std::string>& visited_paths, std::atomic<uint64_t>& processed_bytes, ThreadPool& pool, std::vector<std::future<void>>& futures, std::mutex& report_mutex) {
     for (auto it = current_node.begin(); it != current_node.end(); ++it) {
         std::string name = it.key();
 
@@ -42,10 +44,12 @@ static void verify_recursive(const json& current_node, const fs::path& current_p
         if (it.value().is_object()) {
             // 这是一个目录
             if (!fs::exists(item_path) || !fs::is_directory(item_path)) {
+                std::lock_guard<std::mutex> lock(report_mutex); // 保护报告写入
                 report.missing.push_back(utf8_item_path + " (Dir)");
             }
             else {
-                verify_recursive(it.value(), item_path, algo, report, visited_paths, processed_bytes);
+                // 递归深入，传递并发组件
+                verify_recursive(it.value(), item_path, algo, report, visited_paths, processed_bytes, pool, futures, report_mutex);
             }
         }
         else if (it.value().is_string()) {
@@ -53,25 +57,35 @@ static void verify_recursive(const json& current_node, const fs::path& current_p
             std::string expected_hash = it.value();
 
             if (!fs::exists(item_path) || !fs::is_regular_file(item_path)) {
+                std::lock_guard<std::mutex> lock(report_mutex); // 保护报告写入
                 report.missing.push_back(utf8_item_path);
             }
             else {
-                // 动态创建哈希引擎并计算当前磁盘文件的哈希
-                auto engine = HashFactory::create(algo);
-                std::string actual_hash = calculate_file_hash(item_path, std::move(engine), processed_bytes);
+                futures.push_back(pool.enqueue([item_path, expected_hash, algo, utf8_item_path, &report, &report_mutex, &processed_bytes]() {
+                    try {
+                        auto engine = HashFactory::create(algo);
+                        std::string actual_hash = calculate_file_hash(item_path, std::move(engine), processed_bytes);
 
-                if (actual_hash == expected_hash) {
-                    report.passed.push_back(utf8_item_path);
-                }
-                else {
-                    report.modified.push_back(utf8_item_path);
-                }
+                        std::lock_guard<std::mutex> lock(report_mutex); // 保护报告写入
+                        if (actual_hash == expected_hash) {
+                            report.passed.push_back(utf8_item_path);
+                        }
+                        else {
+                            report.modified.push_back(utf8_item_path);
+                        }
+                    }
+                    catch (const std::exception& e) {
+                        // 容错处理：文件被独占或无权限读取时不崩溃，标记为读取错误
+                        std::lock_guard<std::mutex> lock(report_mutex); // 保护报告写入
+                        report.modified.push_back(utf8_item_path + " [READ ERROR]");
+                    }
+                    }));
             }
         }
     }
 }
 
-VerifyReport verify_directory(const json& snapshot, const fs::path& target_dir, std::atomic<uint64_t>& processed_bytes) {
+VerifyReport verify_directory(const json& snapshot, const fs::path& target_dir, std::atomic<uint64_t>& processed_bytes, ThreadPool& pool) {
     VerifyReport report;
     std::unordered_set<std::string> visited_paths;
 
@@ -84,8 +98,17 @@ VerifyReport verify_directory(const json& snapshot, const fs::path& target_dir, 
     }
     std::string algo = snapshot["__algo__"].get<std::string>();
 
+    // 准备多线程组件
+    std::mutex report_mutex;
+    std::vector<std::future<void>> futures;
+
     // 2. Forward diffing: Check files recorded in the JSON snapshot
-    verify_recursive(snapshot, target_dir, algo, report, visited_paths, processed_bytes);
+    verify_recursive(snapshot, target_dir, algo, report, visited_paths, processed_bytes, pool, futures, report_mutex);
+
+    // 阻塞主线程，等待线程池中的所有哈希校验任务完成
+    for (auto& f : futures) {
+        f.get();
+    }
 
     // 3. Reverse scan: Find files on disk that are not recorded in the JSON (Untracked)
     if (fs::exists(target_dir) && fs::is_directory(target_dir)) {

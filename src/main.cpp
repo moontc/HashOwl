@@ -82,7 +82,8 @@ void run_verify_mode(const fs::path& targetPath, const fs::path& snapshotPath) {
     auto ui_thread = create_ui_thread(bar, processed_bytes, total_bytes);
 
     auto start = std::chrono::high_resolution_clock::now();
-    VerifyReport report = verify_directory(snapshot, targetPath, processed_bytes);
+    ThreadPool pool;
+    VerifyReport report = verify_directory(snapshot, targetPath, processed_bytes, pool);
 
     // 安全退出子线程
     ui_thread.request_stop();

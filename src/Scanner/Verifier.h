@@ -4,6 +4,7 @@
 #include <vector>
 #include <atomic>
 #include "include/nlohmann/json.hpp"
+#include "ThreadPool.h"
 
 // 用于存储校验结果的分类报告
 struct VerifyReport {
@@ -13,4 +14,4 @@ struct VerifyReport {
     std::vector<std::string> untracked; // 磁盘上有，但快照中没有记录
 };
 
-VerifyReport verify_directory(const nlohmann::json& snapshot, const std::filesystem::path& target_dir, std::atomic<uint64_t>& processed_bytes);
+VerifyReport verify_directory(const nlohmann::json& snapshot, const std::filesystem::path& target_dir, std::atomic<uint64_t>& processed_bytes, ThreadPool& pool);
