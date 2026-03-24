@@ -1,7 +1,7 @@
 #include "Verifier.h"
 #include "HashEngines/HashFactory.h"
 #include "HashEngines/HashUtils.h"
-#include <set>
+#include <unordered_set>
 #include <iostream>
 
 namespace fs = std::filesystem;
@@ -26,7 +26,7 @@ static fs::path utf8_to_path(const std::string& utf8_str) {
 }
 
 // 递归遍历 JSON 节点
-static void verify_recursive(const json& current_node, const fs::path& current_path, const std::string& algo, VerifyReport& report, std::set<std::string>& visited_paths, std::atomic<uint64_t>& processed_bytes) {
+static void verify_recursive(const json& current_node, const fs::path& current_path, const std::string& algo, VerifyReport& report, std::unordered_set<std::string>& visited_paths, std::atomic<uint64_t>& processed_bytes) {
     for (auto it = current_node.begin(); it != current_node.end(); ++it) {
         std::string name = it.key();
 
@@ -73,7 +73,10 @@ static void verify_recursive(const json& current_node, const fs::path& current_p
 
 VerifyReport verify_directory(const json& snapshot, const fs::path& target_dir, std::atomic<uint64_t>& processed_bytes) {
     VerifyReport report;
-    std::set<std::string> visited_paths;
+    std::unordered_set<std::string> visited_paths;
+
+    uint64_t expected_files = snapshot.value("__total_files__", 1000ULL);
+    visited_paths.reserve(expected_files);
 
     // 1. Read the algorithm from the JSON root node, throw an error if missing
     if (!snapshot.contains("__algo__")) {
