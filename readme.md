@@ -20,7 +20,7 @@ The development of HashOwl is highly active. Here are the core objectives planne
 - **Compiler:** Must MSVC now
 - **Engine:** CMake 3.15 or newer
 
-*(Note: Third-party dependencies include `nlohmann/json`, `indicators`, and `libdeflate`)*
+*(Note: Third-party dependencies include `nlohmann/json`, `indicators`, `blake3`, and `libdeflate`)*
 
 ### Building Project
 

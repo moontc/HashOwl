@@ -11,6 +11,6 @@ FetchContent_MakeAvailable(googlebenchmark)
 
 add_executable(HashOwl_Benchmark benchmark_crc.cpp ${CMAKE_SOURCE_DIR}/src/HashEngines/BcryptEngine.cpp ${CMAKE_SOURCE_DIR}/src/HashEngines/SimdCrc32cEngine.cpp)
 
-target_link_libraries(HashOwl_Benchmark PRIVATE benchmark::benchmark libdeflate_static bcrypt)
+target_link_libraries(HashOwl_Benchmark PRIVATE benchmark::benchmark libdeflate_static bcrypt blake3)
 
 target_include_directories(HashOwl_Benchmark PRIVATE ${CMAKE_SOURCE_DIR}/src/HashEngines)

@@ -5,6 +5,7 @@
 #include "LibDeflateCrc32Engine.h" 
 #include "BcryptEngine.h"
 #include "SimdCrc32cEngine.h"
+#include "Blake3Engine.h"
 
 const size_t BUFFER_SIZE = 100 * 1024 * 1024;
 static std::vector<char> ram_buffer(BUFFER_SIZE, 'X');
@@ -57,5 +58,15 @@ static void BM_BcryptEngine_Sha256(benchmark::State& state) {
     state.SetBytesProcessed(state.iterations() * BUFFER_SIZE);
 }
 BENCHMARK(BM_BcryptEngine_Sha256)->Unit(benchmark::kMillisecond);
+
+static void BM_Blake3(benchmark::State& state) {
+    Blake3Engine engine;
+    for (auto _ : state) {
+        engine.update(ram_buffer.data(), ram_buffer.size());
+        benchmark::DoNotOptimize(engine);
+    }
+    state.SetBytesProcessed(state.iterations() * BUFFER_SIZE);
+}
+BENCHMARK(BM_Blake3)->Unit(benchmark::kMillisecond);
 
 BENCHMARK_MAIN();

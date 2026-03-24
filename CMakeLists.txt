@@ -45,6 +45,15 @@ FetchContent_MakeAvailable(libdeflate)
 
 include_directories(${libdeflate_SOURCE_DIR})
 
+include(FetchContent)
+FetchContent_Declare(
+    blake3
+    GIT_REPOSITORY https://github.com/BLAKE3-team/BLAKE3.git
+    GIT_TAG        1.5.1
+    SOURCE_SUBDIR  c
+)
+FetchContent_MakeAvailable(blake3)
+
 option(HASHOWL_BUILD_TESTS "Build Google Benchmark tests" ON)
 
 add_subdirectory(src)

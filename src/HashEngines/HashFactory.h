@@ -4,6 +4,7 @@
 #include "CrcEngine.h"
 #include "SimdCrc32cEngine.h"
 #include "LibDeflateCrc32Engine.h"
+#include "Blake3Engine.h"
 #include <memory>
 #include <string>
 #include <algorithm>
@@ -50,8 +51,7 @@ public:
         if (algoName == "SHA384") return std::make_unique<BcryptEngine>(L"SHA384");
         if (algoName == "SHA512") return std::make_unique<BcryptEngine>(L"SHA512");
 #endif
-        // Later, we can easily plug in OpenSSL or BLAKE3 here!
-        // if (algoName == "BLAKE3") return std::make_unique<Blake3Engine>();
+        if (algoName == "BLAKE3") return std::make_unique<Blake3Engine>();
 
         throw std::invalid_argument("Unsupported hash algorithm: " + algoName);
     }
