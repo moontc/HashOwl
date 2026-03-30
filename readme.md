@@ -2,7 +2,7 @@
 
 **HashOwl** is a high-performance, multithreaded command-line tool written in modern C++, designed for fast hash calculation and absolute file integrity verification. It natively supports a wide range of hash algorithms and outputs the computation results as a structured JSON report, serving as the definitive baseline for verification. When targeting a directory, HashOwl acts as a cryptographic tree builder: the exported JSON file will comprehensively store the individual hashes of all nested files, the aggregated hashes of all subdirectories, and the ultimate global hash of the entire target directory.
 
-> ⚠️ **Notice:** HashOwl is a work in progress, currently requiring MSVC on Windows. Expect frequent changes to features and APIs.
+> ⚠️ **Notice:** HashOwl is a work in progress, expect frequent changes to features and APIs.
 
 ## 🗺️ Roadmap
 
@@ -17,7 +17,6 @@ The development of HashOwl is highly active. Here are the core objectives planne
 ### Prerequisites
 
 - **OS:** Windows (Relies on native `bcrypt.lib` now)
-- **Compiler:** Must MSVC now
 - **Engine:** CMake 3.15 or newer
 
 *(Note: Third-party dependencies include `nlohmann/json`, `indicators`, `blake3`, and `libdeflate`)*
@@ -34,7 +33,7 @@ cmake --build . --config Release
 ## 🛠️ Usage
 
 ```bash
-HashOwl.exe <path> [--algo <md5|sha1|sha256|sha384|sha512|crc32|crc64>] [-o [output_path]] [--verify <snapshot.json>]
+HashOwl.exe <path> [--algo <md5|sha1|sha256|sha384|sha512|crc32|crc64|blake3>] [-o [output_path]] [--verify <snapshot.json>]
 ```
 
 ### Examples
