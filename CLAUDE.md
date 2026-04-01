@@ -12,7 +12,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `cmake --build out/build/x64-debug`
   - `cmake --build out/build/x64-release`
 - Run the CLI from the build tree:
-  - `./out/build/x64-release/src/HashOwl.exe <path> [--algo <md5|sha1|sha256|sha384|sha512|crc32|crc64|blake3>] [-o [output_path]] [--verify <snapshot.json>]`
+  - `./out/build/x64-release/src/HashOwl.exe <path> [--algo <md5|sha1|sha256|sha384|sha512|crc32|crc32c|crc64|blake3>] [-o [output_path]] [--verify <snapshot.json>]`
+- Unit test target:
+  - `cmake --build out/build/x64-debug --target HashOwl_UnitTests`
+  - `ctest --test-dir out/build/x64-debug --output-on-failure`
 - Benchmark target:
   - `./out/build/x64-release/tests/HashOwl_Benchmark.exe`
   - Run a single benchmark with Google Benchmark filtering, e.g. `./out/build/x64-release/tests/HashOwl_Benchmark.exe --benchmark_filter=BM_Blake3`
@@ -20,8 +23,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Test/lint reality
 
 - There is no lint target configured in CMake and no repo-local clang-format/clang-tidy/copilot/cursor rule file in the root project.
-- `HASHOWL_BUILD_TESTS` enables the `tests/` subtree, but that subtree currently builds Google Benchmark microbenchmarks rather than unit tests or `ctest` cases.
-- `tests/CMakeLists.txt` does not register `add_test(...)`, so `ctest` is not the primary validation path here.
+- `HASHOWL_BUILD_TESTS` enables the `tests/` subtree, which now builds both a GoogleTest-based automated test target (`HashOwl_UnitTests`) and the Google Benchmark executable (`HashOwl_Benchmark`).
+- `tests/CMakeLists.txt` registers the automated suite with CTest via `gtest_discover_tests(...)`, so `ctest` is now a primary validation path for core hashing, scanning, and verification behavior.
+- Current automated coverage includes hash utility vectors, file hashing, directory scanning, verifier classification, reserved metadata-name rejection, missing `__algo__` handling, and UTF-8 path round-trips.
 
 ## Architecture overview
 
@@ -78,5 +82,5 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Dependency layout
 
 - `nlohmann/json` and `indicators` are vendored under `src/include/`.
-- `libdeflate`, `blake3`, and `googlebenchmark` are fetched with `FetchContent` during configure.
+- `libdeflate`, `blake3`, `googletest`, and `googlebenchmark` are fetched with `FetchContent` during configure.
 - Ignore generated dependency/build trees when reading the repo (`out/`, `cmake-build-*`, `_deps/`) unless the task is specifically about the build system.
