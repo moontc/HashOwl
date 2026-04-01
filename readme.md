@@ -14,54 +14,86 @@ The development of HashOwl is highly active. Here are the core objectives planne
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### Current Support
 
-- **OS:** Windows (Relies on native `bcrypt.lib` now)
-- **Engine:** CMake 3.15 or newer
+- **OS:** Windows
+- **Compiler:** MSVC
+- **Generator:** Ninja via checked-in CMake presets
+- **CMake:** 3.15 or newer
 
-*(Note: Third-party dependencies include `nlohmann/json`, `indicators`, `blake3`, and `libdeflate`)*
+*(Third-party dependencies include `nlohmann/json`, `indicators`, `blake3`, and `libdeflate`.)*
+
+### Supported Algorithms
+
+- `crc32` **(default)**
+- `crc32c` *(requires CPU support for SSE4.2 at runtime)*
+- `crc64`
+- `md5`
+- `sha1`
+- `sha256`
+- `sha384`
+- `sha512`
+- `blake3`
 
 ### Building Project
 
+Use the checked-in CMake presets:
+
 ```bash
-mkdir build
-cd build
-cmake ..
-cmake --build . --config Release
+cmake --preset x64-debug
+cmake --build out/build/x64-debug
+
+cmake --preset x64-release
+cmake --build out/build/x64-release
 ```
+
+Additional Windows presets are also available in `CMakePresets.json` for `x86-debug` and `x86-release`.
+
+### Build Notes
+
+- The project is currently Windows-focused. MD5 and SHA-family hashing rely on native `bcrypt.lib`.
+- Release builds use aggressive MSVC optimization flags, including `/O2`, `/Ob2`, `/fp:fast`, `/GL`, `/arch:AVX2`, and `/favor:INTEL64`.
+- For best performance, use the Release preset on a modern CPU with AVX2 support.
 
 ## 🛠️ Usage
 
 ```bash
-HashOwl.exe <path> [--algo <md5|sha1|sha256|sha384|sha512|crc32|crc64|blake3>] [-o [output_path]] [--verify <snapshot.json>]
+./out/build/x64-release/src/HashOwl.exe <path> [--algo <md5|sha1|sha256|sha384|sha512|crc32|crc32c|crc64|blake3>] [-o [output_path]] [--verify <snapshot.json>]
 ```
+
+### Usage Notes
+
+- The default hashing algorithm is `CRC32`.
+- `--verify` and `-v` verify against a previously exported snapshot.
+- During verification, the algorithm is read from the snapshot metadata rather than chosen from the CLI.
+- `-o` without a value writes `<target_name>_hashowl.json` next to the target path.
 
 ### Examples
 
-**1. Hash a single file (Defaults to SHA256):**
+**1. Hash a single file (defaults to CRC32):**
 ```bash
-HashOwl.exe C:\path\to\your\file.txt
+./out/build/x64-release/src/HashOwl.exe C:\path\to\your\file.txt
 ```
 
 **2. Hash an entire directory using SHA512:**
 ```bash
-HashOwl.exe C:\path\to\folder --algo SHA512
+./out/build/x64-release/src/HashOwl.exe C:\path\to\folder --algo SHA512
 ```
 
 **3. Scan a directory and export the hash tree to JSON:**
 ```bash
-HashOwl.exe C:\path\to\folder -o
+./out/build/x64-release/src/HashOwl.exe C:\path\to\folder -o
 ```
-*(This will automatically save a `<folder_name>_hashowl.json` file in the parent directory of the target.)*
+*(This saves `<folder_name>_hashowl.json` in the parent directory of the target.)*
 
 **4. Export JSON to a specific custom directory/file:**
 ```bash
-HashOwl.exe C:\path\to\folder -o C:\custom\output\path.json
+./out/build/x64-release/src/HashOwl.exe C:\path\to\folder -o C:\custom\output\path.json
 ```
 
 **5. Verify a directory against an exported JSON snapshot:**
 ```bash
-HashOwl.exe C:\path\to\folder --verify C:\path\to\folder_hashowl.json
+./out/build/x64-release/src/HashOwl.exe C:\path\to\folder --verify C:\path\to\folder_hashowl.json
 ```
 
 **Sample Verification Output:**
