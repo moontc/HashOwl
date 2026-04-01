@@ -54,7 +54,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(blake3)
 
-option(HASHOWL_BUILD_TESTS "Build Google Benchmark tests" ON)
+option(HASHOWL_BUILD_TESTS "Build benchmarks and automated tests" ON)
 
 add_subdirectory(src)
 

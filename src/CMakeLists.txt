@@ -1,19 +1,30 @@
-add_executable (HashOwl   
-    "main.cpp"   
-    "HashEngines/IHashEngine.h" 
-    "HashEngines/HashUtils.h" 
-    "HashEngines/HashUtils.cpp" 
-    "HashEngines/BcryptEngine.h" 
-    "HashEngines/BcryptEngine.cpp" 
-    "HashEngines/HashFactory.h" 
-    "Scanner/Scanner.h" 
-    "Scanner/Scanner.cpp"     
-    "HashEngines/CrcEngine.h" 
-    "HashEngines/SimdCrc32cEngine.h" 
-    "HashEngines/SimdCrc32cEngine.cpp" 
+add_library(HashOwlCore STATIC
+    "HashEngines/HashUtils.cpp"
+    "HashEngines/BcryptEngine.cpp"
+    "HashEngines/SimdCrc32cEngine.cpp"
+    "Scanner/Scanner.cpp"
+    "Scanner/Verifier.cpp"
+    "HashEngines/IHashEngine.h"
+    "HashEngines/HashUtils.h"
+    "HashEngines/BcryptEngine.h"
+    "HashEngines/HashFactory.h"
+    "HashEngines/CrcEngine.h"
+    "HashEngines/SimdCrc32cEngine.h"
     "HashEngines/LibDeflateCrc32Engine.h"
- "Scanner/Verifier.h" "Scanner/Verifier.cpp" "Scanner/ThreadPool.h" "HashEngines/Blake3Engine.h")
+    "HashEngines/Blake3Engine.h"
+    "Scanner/Scanner.h"
+    "Scanner/Verifier.h"
+    "Scanner/ThreadPool.h"
+)
 
-target_link_libraries(HashOwl PRIVATE libdeflate_static bcrypt blake3)
+target_include_directories(HashOwlCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_include_directories(HashOwl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(HashOwlCore PUBLIC libdeflate_static blake3)
+
+if(WIN32)
+    target_link_libraries(HashOwlCore PUBLIC bcrypt)
+endif()
+
+add_executable(HashOwl "main.cpp")
+
+target_link_libraries(HashOwl PRIVATE HashOwlCore)
