@@ -20,6 +20,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `./out/build/x64-release/tests/HashOwl_Benchmark.exe`
   - Run a single benchmark with Google Benchmark filtering, e.g. `./out/build/x64-release/tests/HashOwl_Benchmark.exe --benchmark_filter=BM_Blake3`
 
+## Local toolchain reality
+
+- The primary local workflow uses CLion's `Visual Studio` toolchain at `C:\Program Files\Microsoft Visual Studio\18\Community`.
+- That toolchain uses architecture `amd64`, CMake `4.2.2`, build tool `ninja.exe`, and both C/C++ compilers as `cl.exe`.
+- In CLion, the active CMake profiles map directly to the checked-in presets:
+  - `x64-debug` -> `--preset "x64-debug"` -> `D:\Code\HashOwl\out\build\x64-debug`
+  - `x64-release` -> `--preset "x64-release"` -> `D:\Code\HashOwl\out\build\x64-release`
+- If a plain shell cannot find `cl.exe` or `ninja`, prefer this CLion/preset context instead of guessing a different Visual Studio generator.
+
 ## Test/lint reality
 
 - There is no lint target configured in CMake and no repo-local clang-format/clang-tidy/copilot/cursor rule file in the root project.
