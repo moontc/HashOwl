@@ -13,7 +13,7 @@
 #include "Scanner/Scanner.h"
 #include "Scanner/Verifier.h"
 #include "include/nlohmann/json.hpp"
-#include "include/indicators.hpp"
+#include "ProgressBar.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -29,14 +29,14 @@ std::string main_path_to_utf8(const fs::path& p) {
 }
 
 // 封装进度条 UI 线程逻辑
-auto create_ui_thread(indicators::ProgressBar& bar, std::atomic<uint64_t>& processed_bytes, uint64_t total_bytes) {
+auto create_ui_thread(ProgressBar& bar, std::atomic<uint64_t>& processed_bytes, uint64_t total_bytes) {
     return std::jthread([&bar, &processed_bytes, total_bytes](std::stop_token stoken) {
         auto last_time = std::chrono::high_resolution_clock::now();
         uint64_t last_bytes = 0;
 
         while (!stoken.stop_requested()) {
             uint64_t current_bytes = processed_bytes.load(std::memory_order_relaxed);
-            size_t progress = total_bytes > 0 ? static_cast<size_t>((static_cast<double>(current_bytes) / total_bytes) * 100.0) : 100;
+            int progress = total_bytes > 0 ? static_cast<int>((static_cast<double>(current_bytes) / total_bytes) * 100.0) : 100;
 
             auto now = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> dt = now - last_time;
@@ -46,8 +46,7 @@ auto create_ui_thread(indicators::ProgressBar& bar, std::atomic<uint64_t>& proce
             if (speed_mbps >= 1024.0) snprintf(postfix, sizeof(postfix), "speed: %.2f GB/s", speed_mbps / 1024.0);
             else snprintf(postfix, sizeof(postfix), "speed: %.2f MB/s", speed_mbps);
 
-            bar.set_option(indicators::option::PostfixText{ postfix });
-            bar.set_progress(progress > 100 ? 100 : progress);
+            bar.update(progress, postfix);
 
             last_bytes = current_bytes; last_time = now;
             std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -70,14 +69,7 @@ void run_verify_mode(const fs::path& targetPath, const fs::path& snapshotPath) {
     std::cout << "⚙️ Algorithm (From Snapshot): " << algo << "\n";
 
     std::atomic<uint64_t> processed_bytes{ 0 };
-    indicators::ProgressBar bar{
-        indicators::option::BarWidth{40}, indicators::option::Start{"["}, indicators::option::Fill{"#"},
-        indicators::option::Lead{"#"}, indicators::option::Remainder{" "}, indicators::option::End{"]"},
-        indicators::option::ShowPercentage{true}, indicators::option::ForegroundColor{indicators::Color::cyan},
-        indicators::option::FontStyles{std::vector<indicators::FontStyle>{indicators::FontStyle::bold}}
-    };
-    indicators::show_console_cursor(false);
-
+    ProgressBar bar;
     // 启动 UI 线程
     auto ui_thread = create_ui_thread(bar, processed_bytes, total_bytes);
 
@@ -87,8 +79,8 @@ void run_verify_mode(const fs::path& targetPath, const fs::path& snapshotPath) {
 
     // 安全退出子线程
     ui_thread.request_stop();
-    bar.set_progress(100);
-    indicators::show_console_cursor(true);
+    ui_thread.join();
+    bar.finish();
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> diff = end - start;
@@ -152,14 +144,7 @@ void run_generate_mode(const fs::path& targetPath, const std::string& selectedAl
     }
 
     std::atomic<uint64_t> processed_bytes{ 0 };
-    indicators::ProgressBar bar{
-        indicators::option::BarWidth{40}, indicators::option::Start{"["}, indicators::option::Fill{"#"},
-        indicators::option::Lead{"#"}, indicators::option::Remainder{" "}, indicators::option::End{"]"},
-        indicators::option::ShowPercentage{true}, indicators::option::ForegroundColor{indicators::Color::cyan},
-        indicators::option::FontStyles{std::vector<indicators::FontStyle>{indicators::FontStyle::bold}}
-    };
-    indicators::show_console_cursor(false);
-
+    ProgressBar bar;
     // 启动 UI 线程
     auto ui_thread = create_ui_thread(bar, processed_bytes, total_bytes);
 
@@ -179,8 +164,8 @@ void run_generate_mode(const fs::path& targetPath, const std::string& selectedAl
 
     // 安全退出子线程
     ui_thread.request_stop();
-    bar.set_progress(100);
-    indicators::show_console_cursor(true);
+    ui_thread.join();
+    bar.finish();
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> diff = end - start;
@@ -272,7 +257,7 @@ int main(int argc, char* argv[]) {
         }
     }
     catch (const std::exception& e) {
-        indicators::show_console_cursor(true); // 防止奔溃时隐藏光标
+        // 光标恢复由 ProgressBar 析构函数负责
         std::cerr << "\n❌ [FATAL ERROR] " << e.what() << "\n";
     }
 
