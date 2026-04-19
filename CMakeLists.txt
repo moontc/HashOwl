@@ -1,4 +1,4 @@
-﻿cmake_minimum_required (VERSION 3.15)
+﻿cmake_minimum_required (VERSION 3.21)
 
 # If supported, enable Edit-and-Continue (hot reload) for the MSVC compiler.
 if (POLICY CMP0141)
