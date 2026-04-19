@@ -54,10 +54,29 @@ auto create_ui_thread(ProgressBar& bar, std::atomic<uint64_t>& processed_bytes, 
         });
 }
 
+static void print_help(const char* argv0) {
+    std::cout <<
+        "Usage: " << argv0 << " <path> [options]\n"
+        "\n"
+        "Options:\n"
+        "  --algo <algorithm>      Hash algorithm to use (default: CRC32)\n"
+        "                          Supported: md5, sha1, sha256, sha384, sha512,\n"
+        "                                     crc32, crc32c, crc64, blake3\n"
+        "  -o [output_path]        Export snapshot JSON (optional output path)\n"
+        "  --verify, -v <snapshot> Verify against a previously generated snapshot\n"
+        "  --help, -h              Show this help message\n"
+        "\n"
+        "Exit codes:\n"
+        "  0  Success\n"
+        "  1  Argument error\n"
+        "  2  Runtime error\n"
+        "  3  Verification failed (modified or missing files)\n";
+}
+
 // =========================================================
 // Verify Mode
 // =========================================================
-void run_verify_mode(const fs::path& targetPath, const fs::path& snapshotPath) {
+bool run_verify_mode(const fs::path& targetPath, const fs::path& snapshotPath) {
     std::cout << "🔍 Verification Mode Initiated...\n";
 
     std::ifstream file(snapshotPath);
@@ -103,6 +122,8 @@ void run_verify_mode(const fs::path& targetPath, const fs::path& snapshotPath) {
     }
     std::cout << "------------------------------------------------\n";
     std::cout << "⏱️ Total Time: " << std::fixed << std::setprecision(2) << diff.count() << " seconds\n";
+
+    return report.modified.empty() && report.missing.empty();
 }
 
 // =========================================================
@@ -220,7 +241,11 @@ int main(int argc, char* argv[]) {
     // 解析参数
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
-        if (arg == "--algo" && i + 1 < argc && argv[i + 1][0] != '-') selectedAlgo = argv[++i];
+        if (arg == "--help" || arg == "-h") {
+            print_help(argv[0]);
+            return 0;
+        }
+        else if (arg == "--algo" && i + 1 < argc && argv[i + 1][0] != '-') selectedAlgo = argv[++i];
         else if (arg == "-o") {
             exportJson = true;
             if (i + 1 < argc && argv[i + 1][0] != '-') customOutputPathStr = argv[++i];
@@ -250,18 +275,17 @@ int main(int argc, char* argv[]) {
             fs::path snapshotPath = verifySnapshotPathStr;
             if (!fs::exists(snapshotPath)) throw std::runtime_error("Snapshot file not found: " + main_path_to_utf8(snapshotPath));
 
-            run_verify_mode(targetPath, snapshotPath);
+            bool passed = run_verify_mode(targetPath, snapshotPath);
+            return passed ? 0 : 3;
         }
         else {
             run_generate_mode(targetPath, selectedAlgo, exportJson, customOutputPathStr);
+            return 0;
         }
     }
     catch (const std::exception& e) {
         // 光标恢复由 ProgressBar 析构函数负责
         std::cerr << "\n❌ [FATAL ERROR] " << e.what() << "\n";
+        return 2;
     }
-
-    std::cout << "\nPress Enter to exit...";
-    std::cin.get();
-    return 0;
 }
