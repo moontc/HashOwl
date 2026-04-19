@@ -1,4 +1,4 @@
-add_library(HashOwlCore STATIC
+add_library(hashowl-core STATIC
     "HashEngines/HashUtils.cpp"
     "HashEngines/BcryptEngine.cpp"
     "HashEngines/SimdCrc32cEngine.cpp"
@@ -17,14 +17,14 @@ add_library(HashOwlCore STATIC
     "Scanner/ThreadPool.h"
 )
 
-target_include_directories(HashOwlCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(hashowl-core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_link_libraries(HashOwlCore PUBLIC libdeflate_static blake3)
+target_link_libraries(hashowl-core PUBLIC libdeflate_static blake3)
 
 if(WIN32)
-    target_link_libraries(HashOwlCore PUBLIC bcrypt)
+    target_link_libraries(hashowl-core PUBLIC bcrypt)
 endif()
 
-add_executable(HashOwl "main.cpp")
+add_executable(hashowl "main.cpp")
 
-target_link_libraries(HashOwl PRIVATE HashOwlCore)
+target_link_libraries(hashowl PRIVATE hashowl-core)

@@ -23,7 +23,7 @@ add_executable(HashOwl_UnitTests
   scanner_verifier_tests.cpp
 )
 
-target_link_libraries(HashOwl_UnitTests PRIVATE HashOwlCore GTest::gtest_main)
+target_link_libraries(HashOwl_UnitTests PRIVATE hashowl-core GTest::gtest_main)
 
 include(GoogleTest)
 gtest_discover_tests(HashOwl_UnitTests)
@@ -32,4 +32,4 @@ add_executable(HashOwl_Benchmark benchmark_crc.cpp)
 
 target_include_directories(HashOwl_Benchmark PRIVATE ${CMAKE_SOURCE_DIR}/src/HashEngines)
 
-target_link_libraries(HashOwl_Benchmark PRIVATE HashOwlCore benchmark::benchmark)
+target_link_libraries(HashOwl_Benchmark PRIVATE hashowl-core benchmark::benchmark)
