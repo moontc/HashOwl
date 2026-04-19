@@ -85,6 +85,32 @@ static void verify_recursive(const json& current_node, const fs::path& current_p
     }
 }
 
+VerifyReport verify_file(const json& snapshot, const fs::path& target_file, std::atomic<uint64_t>& processed_bytes) {
+    if (!snapshot.contains("__algo__")) {
+        throw std::runtime_error("Verification Error: Missing '__algo__' metadata in the JSON snapshot. Cannot determine which hash algorithm to use.");
+    }
+    std::string algo = snapshot["__algo__"].get<std::string>();
+    std::string expected_hash = snapshot.value("__hash__", "");
+
+    VerifyReport report;
+    std::string utf8_path = path_to_utf8(target_file);
+
+    if (!fs::exists(target_file) || !fs::is_regular_file(target_file)) {
+        report.missing.push_back(utf8_path);
+        return report;
+    }
+
+    auto engine = HashFactory::create(algo);
+    std::string actual_hash = calculate_file_hash(target_file, std::move(engine), processed_bytes);
+
+    if (actual_hash == expected_hash)
+        report.passed.push_back(utf8_path);
+    else
+        report.modified.push_back(utf8_path);
+
+    return report;
+}
+
 VerifyReport verify_directory(const json& snapshot, const fs::path& target_dir, std::atomic<uint64_t>& processed_bytes, ThreadPool& pool) {
     VerifyReport report;
     std::unordered_set<std::string> visited_paths;

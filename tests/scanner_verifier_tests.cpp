@@ -201,6 +201,85 @@ TEST(VerifierTests, MissingAlgorithmMetadataThrows) {
     EXPECT_THROW(verify_directory(snapshot, temp_dir.path(), processed_bytes, verify_pool), std::runtime_error);
 }
 
+TEST(VerifierFileTests, UnchangedFileVerifiesCleanly) {
+    TempDirectory temp_dir;
+    const fs::path file_path = temp_dir.path() / "data.txt";
+    write_file(file_path, "hello");
+
+    std::atomic<uint64_t> processed_bytes{0};
+    ThreadPool scan_pool(2);
+    json dir_snapshot = scan_directory(temp_dir.path(), "CRC32", processed_bytes, scan_pool);
+
+    json snapshot;
+    snapshot["__algo__"] = "CRC32";
+    snapshot["__hash__"] = dir_snapshot["data.txt"].get<std::string>();
+
+    processed_bytes.store(0);
+    const VerifyReport report = verify_file(snapshot, file_path, processed_bytes);
+
+    EXPECT_EQ(to_set(report.passed), (std::set<std::string>{to_utf8(file_path)}));
+    EXPECT_TRUE(report.modified.empty());
+    EXPECT_TRUE(report.missing.empty());
+}
+
+TEST(VerifierFileTests, ModifiedFileIsDetected) {
+    TempDirectory temp_dir;
+    const fs::path file_path = temp_dir.path() / "data.txt";
+    write_file(file_path, "original");
+
+    std::atomic<uint64_t> processed_bytes{0};
+    ThreadPool scan_pool(2);
+    json dir_snapshot = scan_directory(temp_dir.path(), "CRC32", processed_bytes, scan_pool);
+
+    json snapshot;
+    snapshot["__algo__"] = "CRC32";
+    snapshot["__hash__"] = dir_snapshot["data.txt"].get<std::string>();
+
+    write_file(file_path, "tampered");
+
+    processed_bytes.store(0);
+    const VerifyReport report = verify_file(snapshot, file_path, processed_bytes);
+
+    EXPECT_TRUE(report.passed.empty());
+    EXPECT_EQ(to_set(report.modified), (std::set<std::string>{to_utf8(file_path)}));
+    EXPECT_TRUE(report.missing.empty());
+}
+
+TEST(VerifierFileTests, MissingFileIsReported) {
+    TempDirectory temp_dir;
+    const fs::path file_path = temp_dir.path() / "gone.txt";
+    write_file(file_path, "data");
+
+    std::atomic<uint64_t> processed_bytes{0};
+    ThreadPool scan_pool(2);
+    json dir_snapshot = scan_directory(temp_dir.path(), "CRC32", processed_bytes, scan_pool);
+
+    json snapshot;
+    snapshot["__algo__"] = "CRC32";
+    snapshot["__hash__"] = dir_snapshot["gone.txt"].get<std::string>();
+
+    fs::remove(file_path);
+
+    processed_bytes.store(0);
+    const VerifyReport report = verify_file(snapshot, file_path, processed_bytes);
+
+    EXPECT_TRUE(report.passed.empty());
+    EXPECT_TRUE(report.modified.empty());
+    EXPECT_EQ(to_set(report.missing), (std::set<std::string>{to_utf8(file_path)}));
+}
+
+TEST(VerifierFileTests, MissingAlgorithmMetadataThrows) {
+    TempDirectory temp_dir;
+    const fs::path file_path = temp_dir.path() / "data.txt";
+    write_file(file_path, "data");
+
+    json snapshot;
+    snapshot["__hash__"] = "deadbeef";
+
+    std::atomic<uint64_t> processed_bytes{0};
+    EXPECT_THROW(verify_file(snapshot, file_path, processed_bytes), std::runtime_error);
+}
+
 TEST(VerifierTests, SupportsUtf8PathsRoundTrip) {
     TempDirectory temp_dir;
     const fs::path utf8_dir = temp_dir.path() / fs::path(u8"测试");

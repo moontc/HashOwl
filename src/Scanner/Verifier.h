@@ -14,4 +14,5 @@ struct VerifyReport {
     std::vector<std::string> untracked; // 磁盘上有，但快照中没有记录
 };
 
+VerifyReport verify_file(const nlohmann::json& snapshot, const std::filesystem::path& target_file, std::atomic<uint64_t>& processed_bytes);
 VerifyReport verify_directory(const nlohmann::json& snapshot, const std::filesystem::path& target_dir, std::atomic<uint64_t>& processed_bytes, ThreadPool& pool);
