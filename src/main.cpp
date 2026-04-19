@@ -94,7 +94,21 @@ bool run_verify_mode(const fs::path& targetPath, const fs::path& snapshotPath) {
 
     auto start = std::chrono::high_resolution_clock::now();
     ThreadPool pool;
-    VerifyReport report = verify_directory(snapshot, targetPath, processed_bytes, pool);
+    VerifyReport report;
+
+    std::string target_type = snapshot.value("__target_type__", "directory");
+    if (target_type == "file") {
+        std::string expected_hash = snapshot.value("__hash__", "");
+        auto engine = HashFactory::create(algo);
+        std::string actual_hash = calculate_file_hash(targetPath, std::move(engine), processed_bytes);
+        std::string utf8_path = main_path_to_utf8(targetPath);
+        if (actual_hash == expected_hash)
+            report.passed.push_back(utf8_path);
+        else
+            report.modified.push_back(utf8_path);
+    } else {
+        report = verify_directory(snapshot, targetPath, processed_bytes, pool);
+    }
 
     // 安全退出子线程
     ui_thread.request_stop();
