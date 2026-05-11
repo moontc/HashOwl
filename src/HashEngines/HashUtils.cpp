@@ -32,8 +32,9 @@ std::string calculate_file_hash(const std::filesystem::path& filepath, std::uniq
     std::vector<char> buffer(BUFFER_SIZE);
 
     DWORD bytesRead = 0;
+    BOOL readResult = TRUE;
 
-    while (ReadFile(hFile, buffer.data(), BUFFER_SIZE, &bytesRead, NULL) && bytesRead > 0) {
+    while ((readResult = ReadFile(hFile, buffer.data(), BUFFER_SIZE, &bytesRead, NULL)) && bytesRead > 0) {
 
         engine->update(buffer.data(), bytesRead);
 
@@ -41,6 +42,10 @@ std::string calculate_file_hash(const std::filesystem::path& filepath, std::uniq
     }
 
     CloseHandle(hFile);
+
+    if (!readResult) {
+        throw std::runtime_error("I/O error while reading file: " + filepath.string());
+    }
 
 #else
     // Linux 下的 ifstream 也很慢，后期可以换成 POSIX 的 fread() 或 read()
@@ -53,6 +58,10 @@ std::string calculate_file_hash(const std::filesystem::path& filepath, std::uniq
     while (file.read(buffer.data(), buffer.size()) || file.gcount() > 0) {
         engine->update(buffer.data(), file.gcount());
         processed_bytes.fetch_add(file.gcount(), std::memory_order_relaxed);
+    }
+
+    if (file.bad()) {
+        throw std::runtime_error("I/O error while reading file: " + filepath.string());
     }
 #endif
 
