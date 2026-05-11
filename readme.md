@@ -2,6 +2,8 @@
 
 English | [简体中文](docs/README.zh-CN.md)
 
+Do you often worry that the precious files on your hard drive have been corrupted by cosmic rays? If so, HashOwl is an excellent tool for detecting that.
+
 **HashOwl** is a high-performance, multithreaded command-line tool written in modern C++.
 It calculates hashes for files or whole directories, can export a JSON snapshot, and can later verify a target against that snapshot.
 
