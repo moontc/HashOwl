@@ -17,7 +17,7 @@ std::string path_to_utf8(const fs::path& p) {
 }
 
 json scan_directory(const fs::path& dir_path, const std::string& algo_name, std::atomic<uint64_t>& processed_bytes, ThreadPool& pool) {
-    json dir_json = json::object();
+    json entries = json::object();
     std::vector<std::string> child_hashes;
 
     std::vector<std::pair<std::string, std::future<std::string>>> file_futures;
@@ -25,16 +25,12 @@ json scan_directory(const fs::path& dir_path, const std::string& algo_name, std:
     for (const auto& entry : fs::directory_iterator(dir_path)) {
         std::string name = path_to_utf8(entry.path().filename());
 
-        if (name.length() >= 4 && name.substr(0, 2) == "__" && name.substr(name.length() - 2) == "__") {
-            throw std::runtime_error("Security Violation: Found file/folder '" + name + "', which conflicts with internal metadata.");
-        }
-
         if (entry.is_directory()) {
             // To avoid thread starvation on deep folders, we keep directories synchronous
             json sub_dir = scan_directory(entry.path(), algo_name, processed_bytes, pool);
-            dir_json[name] = sub_dir;
+            entries[name] = sub_dir;
 
-            child_hashes.push_back(name + ":" + sub_dir["__hash__"].get<std::string>());
+            child_hashes.push_back(name + ":" + sub_dir["meta"]["hash"].get<std::string>());
         }
         else if (entry.is_regular_file()) {
             // Dispatch the heavy lifting to a background thread
@@ -50,7 +46,7 @@ json scan_directory(const fs::path& dir_path, const std::string& algo_name, std:
     // Wait for all dispatched threads to finish
     for (auto& [name, future_hash] : file_futures) {
         std::string file_hash = future_hash.get();
-        dir_json[name] = file_hash;
+        entries[name] = file_hash;
         child_hashes.push_back(name + ":" + file_hash);
     }
 
@@ -65,7 +61,9 @@ json scan_directory(const fs::path& dir_path, const std::string& algo_name, std:
     auto dir_engine = HashFactory::create(algo_name);
     std::string dir_hash = calculate_string_hash(combined_data, std::move(dir_engine));
 
-    dir_json["__hash__"] = dir_hash;
+    json dir_json;
+    dir_json["meta"]["hash"] = dir_hash;
+    dir_json["entries"] = entries;
 
     return dir_json;
 }

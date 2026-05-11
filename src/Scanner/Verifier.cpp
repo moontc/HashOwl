@@ -9,15 +9,9 @@
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
-// 辅助函数：判断是否为保留的元数据键
-static bool is_metadata_key(const std::string& key) {
-    return key.length() >= 4 && key.substr(0, 2) == "__" && key.substr(key.length() - 2) == "__";
-}
-
 // 辅助函数：将路径转换为 UTF-8 字符串
 static std::string path_to_utf8(const fs::path& p) {
-    auto u8_str = p.u8string();
-    return std::string(reinterpret_cast<const char*>(u8_str.c_str()), u8_str.size());
+    return std::string(reinterpret_cast<const char*>(p.u8string().c_str()), p.u8string().size());
 }
 
 // 将 UTF-8 字符串安全转换为系统路径
@@ -27,13 +21,10 @@ static fs::path utf8_to_path(const std::string& utf8_str) {
     return fs::path(reinterpret_cast<const char8_t*>(utf8_str.c_str()));
 }
 
-// 递归遍历 JSON 节点
-static void verify_recursive(const json& current_node, const fs::path& current_path, const std::string& algo, VerifyReport& report, std::unordered_set<std::string>& visited_paths, std::atomic<uint64_t>& processed_bytes, ThreadPool& pool, std::vector<std::future<void>>& futures, std::mutex& report_mutex) {
-    for (auto it = current_node.begin(); it != current_node.end(); ++it) {
+// 递归遍历 entries 节点
+static void verify_recursive(const json& entries_node, const fs::path& current_path, const std::string& algo, VerifyReport& report, std::unordered_set<std::string>& visited_paths, std::atomic<uint64_t>& processed_bytes, ThreadPool& pool, std::vector<std::future<void>>& futures, std::mutex& report_mutex) {
+    for (auto it = entries_node.begin(); it != entries_node.end(); ++it) {
         std::string name = it.key();
-
-        // 跳过所有的元数据键
-        if (is_metadata_key(name)) continue;
 
         fs::path item_path = current_path / utf8_to_path(name);
         std::string utf8_item_path = path_to_utf8(item_path);
@@ -42,14 +33,12 @@ static void verify_recursive(const json& current_node, const fs::path& current_p
         visited_paths.insert(item_path.lexically_normal().string());
 
         if (it.value().is_object()) {
-            // 这是一个目录
+            // 这是一个目录：值为 {"meta": {...}, "entries": {...}}
             if (!fs::exists(item_path) || !fs::is_directory(item_path)) {
-                std::lock_guard<std::mutex> lock(report_mutex); // 保护报告写入
+                std::lock_guard<std::mutex> lock(report_mutex);
                 report.missing.push_back(utf8_item_path + " (Dir)");
-            }
-            else {
-                // 递归深入，传递并发组件
-                verify_recursive(it.value(), item_path, algo, report, visited_paths, processed_bytes, pool, futures, report_mutex);
+            } else {
+                verify_recursive(it.value()["entries"], item_path, algo, report, visited_paths, processed_bytes, pool, futures, report_mutex);
             }
         }
         else if (it.value().is_string()) {
@@ -57,7 +46,7 @@ static void verify_recursive(const json& current_node, const fs::path& current_p
             std::string expected_hash = it.value();
 
             if (!fs::exists(item_path) || !fs::is_regular_file(item_path)) {
-                std::lock_guard<std::mutex> lock(report_mutex); // 保护报告写入
+                std::lock_guard<std::mutex> lock(report_mutex);
                 report.missing.push_back(utf8_item_path);
             }
             else {
@@ -66,7 +55,7 @@ static void verify_recursive(const json& current_node, const fs::path& current_p
                         auto engine = HashFactory::create(algo);
                         std::string actual_hash = calculate_file_hash(item_path, std::move(engine), processed_bytes);
 
-                        std::lock_guard<std::mutex> lock(report_mutex); // 保护报告写入
+                        std::lock_guard<std::mutex> lock(report_mutex);
                         if (actual_hash == expected_hash) {
                             report.passed.push_back(utf8_item_path);
                         }
@@ -76,7 +65,7 @@ static void verify_recursive(const json& current_node, const fs::path& current_p
                     }
                     catch (const std::exception& e) {
                         // 容错处理：文件被独占或无权限读取时不崩溃，标记为读取错误
-                        std::lock_guard<std::mutex> lock(report_mutex); // 保护报告写入
+                        std::lock_guard<std::mutex> lock(report_mutex);
                         report.modified.push_back(utf8_item_path + " [READ ERROR]");
                     }
                     }));
@@ -86,11 +75,11 @@ static void verify_recursive(const json& current_node, const fs::path& current_p
 }
 
 VerifyReport verify_file(const json& snapshot, const fs::path& target_file, std::atomic<uint64_t>& processed_bytes) {
-    if (!snapshot.contains("__algo__")) {
-        throw std::runtime_error("Verification Error: Missing '__algo__' metadata in the JSON snapshot. Cannot determine which hash algorithm to use.");
+    if (!snapshot.contains("meta") || !snapshot["meta"].contains("algo")) {
+        throw std::runtime_error("Verification Error: Missing 'meta.algo' in the JSON snapshot. Cannot determine which hash algorithm to use.");
     }
-    std::string algo = snapshot["__algo__"].get<std::string>();
-    std::string expected_hash = snapshot.value("__hash__", "");
+    std::string algo = snapshot["meta"]["algo"].get<std::string>();
+    std::string expected_hash = snapshot["meta"].value("hash", "");
 
     VerifyReport report;
     std::string utf8_path = path_to_utf8(target_file);
@@ -115,21 +104,22 @@ VerifyReport verify_directory(const json& snapshot, const fs::path& target_dir, 
     VerifyReport report;
     std::unordered_set<std::string> visited_paths;
 
-    uint64_t expected_files = snapshot.value("__total_files__", 1000ULL);
+    uint64_t expected_files = snapshot.contains("meta") ? snapshot["meta"].value("total_files", 1000ULL) : 1000ULL;
     visited_paths.reserve(expected_files);
 
-    // 1. Read the algorithm from the JSON root node, throw an error if missing
-    if (!snapshot.contains("__algo__")) {
-        throw std::runtime_error("Verification Error: Missing '__algo__' metadata in the JSON snapshot. Cannot determine which hash algorithm to use.");
+    // 1. Read the algorithm from meta, throw an error if missing
+    if (!snapshot.contains("meta") || !snapshot["meta"].contains("algo")) {
+        throw std::runtime_error("Verification Error: Missing 'meta.algo' in the JSON snapshot. Cannot determine which hash algorithm to use.");
     }
-    std::string algo = snapshot["__algo__"].get<std::string>();
+    std::string algo = snapshot["meta"]["algo"].get<std::string>();
 
     // 准备多线程组件
     std::mutex report_mutex;
     std::vector<std::future<void>> futures;
 
     // 2. Forward diffing: Check files recorded in the JSON snapshot
-    verify_recursive(snapshot, target_dir, algo, report, visited_paths, processed_bytes, pool, futures, report_mutex);
+    const json& entries = snapshot.contains("entries") ? snapshot["entries"] : json::object();
+    verify_recursive(entries, target_dir, algo, report, visited_paths, processed_bytes, pool, futures, report_mutex);
 
     // 阻塞主线程，等待线程池中的所有哈希校验任务完成
     for (auto& f : futures) {
@@ -139,13 +129,6 @@ VerifyReport verify_directory(const json& snapshot, const fs::path& target_dir, 
     // 3. Reverse scan: Find files on disk that are not recorded in the JSON (Untracked)
     if (fs::exists(target_dir) && fs::is_directory(target_dir)) {
         for (const auto& entry : fs::recursive_directory_iterator(target_dir)) {
-            std::string name = path_to_utf8(entry.path().filename());
-
-            // Strict enforcement: If a physical file matches the metadata pattern, it's a security violation
-            if (is_metadata_key(name)) {
-                throw std::runtime_error("Verification Error: Security Violation. Found file/folder '" + name + "' on disk, which conflicts with internal metadata reserved words.");
-            }
-
             // Normalize path to ensure accurate string comparison across different OS formats
             std::string normalized_path = entry.path().lexically_normal().string();
 

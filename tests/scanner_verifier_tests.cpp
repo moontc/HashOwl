@@ -78,7 +78,7 @@ void write_file(const fs::path& path, std::string_view contents) {
 }
 
 json add_snapshot_metadata(json snapshot, std::string_view algo = "CRC32") {
-    snapshot["__algo__"] = algo;
+    snapshot["meta"]["algo"] = algo;
     return snapshot;
 }
 
@@ -97,12 +97,14 @@ TEST(ScannerTests, ReturnsExpectedStructureForNestedDirectory) {
     ThreadPool pool(2);
     const json snapshot = scan_directory(temp_dir.path(), "CRC32", processed_bytes, pool);
 
-    ASSERT_TRUE(snapshot.contains("root.txt"));
-    ASSERT_TRUE(snapshot.contains("nested"));
-    ASSERT_TRUE(snapshot.contains("__hash__"));
-    ASSERT_TRUE(snapshot["nested"].is_object());
-    EXPECT_TRUE(snapshot["nested"].contains("child.txt"));
-    EXPECT_TRUE(snapshot["nested"].contains("__hash__"));
+    ASSERT_TRUE(snapshot.contains("entries"));
+    ASSERT_TRUE(snapshot.contains("meta"));
+    ASSERT_TRUE(snapshot["meta"].contains("hash"));
+    ASSERT_TRUE(snapshot["entries"].contains("root.txt"));
+    ASSERT_TRUE(snapshot["entries"].contains("nested"));
+    ASSERT_TRUE(snapshot["entries"]["nested"].is_object());
+    EXPECT_TRUE(snapshot["entries"]["nested"]["entries"].contains("child.txt"));
+    EXPECT_TRUE(snapshot["entries"]["nested"]["meta"].contains("hash"));
 }
 
 TEST(ScannerTests, DirectoryHashIsDeterministicForEquivalentTrees) {
@@ -123,18 +125,9 @@ TEST(ScannerTests, DirectoryHashIsDeterministicForEquivalentTrees) {
     ThreadPool second_pool(2);
     const json second_snapshot = scan_directory(second.path(), "CRC32", second_processed, second_pool);
 
-    EXPECT_EQ(first_snapshot["__hash__"], second_snapshot["__hash__"]);
+    EXPECT_EQ(first_snapshot["meta"]["hash"], second_snapshot["meta"]["hash"]);
 }
 
-TEST(ScannerTests, RejectsReservedMetadataStyleNames) {
-    TempDirectory temp_dir;
-    write_file(temp_dir.path() / "__evil__", "boom");
-
-    std::atomic<uint64_t> processed_bytes{0};
-    ThreadPool pool(2);
-
-    EXPECT_THROW(scan_directory(temp_dir.path(), "CRC32", processed_bytes, pool), std::runtime_error);
-}
 
 TEST(VerifierTests, UnchangedTreeVerifiesCleanly) {
     TempDirectory temp_dir;
@@ -211,8 +204,8 @@ TEST(VerifierFileTests, UnchangedFileVerifiesCleanly) {
     json dir_snapshot = scan_directory(temp_dir.path(), "CRC32", processed_bytes, scan_pool);
 
     json snapshot;
-    snapshot["__algo__"] = "CRC32";
-    snapshot["__hash__"] = dir_snapshot["data.txt"].get<std::string>();
+    snapshot["meta"]["algo"] = "CRC32";
+    snapshot["meta"]["hash"] = dir_snapshot["entries"]["data.txt"].get<std::string>();
 
     processed_bytes.store(0);
     const VerifyReport report = verify_file(snapshot, file_path, processed_bytes);
@@ -232,8 +225,8 @@ TEST(VerifierFileTests, ModifiedFileIsDetected) {
     json dir_snapshot = scan_directory(temp_dir.path(), "CRC32", processed_bytes, scan_pool);
 
     json snapshot;
-    snapshot["__algo__"] = "CRC32";
-    snapshot["__hash__"] = dir_snapshot["data.txt"].get<std::string>();
+    snapshot["meta"]["algo"] = "CRC32";
+    snapshot["meta"]["hash"] = dir_snapshot["entries"]["data.txt"].get<std::string>();
 
     write_file(file_path, "tampered");
 
@@ -255,8 +248,8 @@ TEST(VerifierFileTests, MissingFileIsReported) {
     json dir_snapshot = scan_directory(temp_dir.path(), "CRC32", processed_bytes, scan_pool);
 
     json snapshot;
-    snapshot["__algo__"] = "CRC32";
-    snapshot["__hash__"] = dir_snapshot["gone.txt"].get<std::string>();
+    snapshot["meta"]["algo"] = "CRC32";
+    snapshot["meta"]["hash"] = dir_snapshot["entries"]["gone.txt"].get<std::string>();
 
     fs::remove(file_path);
 
@@ -274,7 +267,8 @@ TEST(VerifierFileTests, MissingAlgorithmMetadataThrows) {
     write_file(file_path, "data");
 
     json snapshot;
-    snapshot["__hash__"] = "deadbeef";
+    snapshot["meta"]["hash"] = "deadbeef";
+    // intentionally no meta.algo
 
     std::atomic<uint64_t> processed_bytes{0};
     EXPECT_THROW(verify_file(snapshot, file_path, processed_bytes), std::runtime_error);
@@ -290,8 +284,8 @@ TEST(VerifierTests, SupportsUtf8PathsRoundTrip) {
     ThreadPool scan_pool(2);
     json snapshot = add_snapshot_metadata(scan_directory(temp_dir.path(), "CRC32", processed_bytes, scan_pool));
 
-    ASSERT_TRUE(snapshot.contains(to_utf8(utf8_dir.filename())));
-    ASSERT_TRUE(snapshot[to_utf8(utf8_dir.filename())].contains(to_utf8(utf8_file.filename())));
+    ASSERT_TRUE(snapshot["entries"].contains(to_utf8(utf8_dir.filename())));
+    ASSERT_TRUE(snapshot["entries"][to_utf8(utf8_dir.filename())]["entries"].contains(to_utf8(utf8_file.filename())));
 
     processed_bytes.store(0);
     ThreadPool verify_pool(2);

@@ -83,8 +83,8 @@ bool run_verify_mode(const fs::path& targetPath, const fs::path& snapshotPath) {
     json snapshot;
     file >> snapshot;
 
-    uint64_t total_bytes = snapshot.value("__total_bytes__", 0ULL);
-    std::string algo = snapshot.value("__algo__", "Unknown");
+    uint64_t total_bytes = snapshot.contains("meta") ? snapshot["meta"].value("total_bytes", 0ULL) : 0ULL;
+    std::string algo = snapshot.contains("meta") ? snapshot["meta"].value("algo", "Unknown") : "Unknown";
     std::cout << "⚙️ Algorithm (From Snapshot): " << algo << "\n";
 
     std::atomic<uint64_t> processed_bytes{ 0 };
@@ -96,7 +96,7 @@ bool run_verify_mode(const fs::path& targetPath, const fs::path& snapshotPath) {
     ThreadPool pool;
     VerifyReport report;
 
-    std::string target_type = snapshot.value("__target_type__", "directory");
+    std::string target_type = snapshot.contains("meta") ? snapshot["meta"].value("target_type", "directory") : "directory";
     if (target_type == "file") {
         report = verify_file(snapshot, targetPath, processed_bytes);
     } else {
@@ -182,8 +182,8 @@ void run_generate_mode(const fs::path& targetPath, const std::string& selectedAl
     if (fs::is_regular_file(targetPath)) {
         auto engine = HashFactory::create(selectedAlgo);
         std::string hash = calculate_file_hash(targetPath, std::move(engine), processed_bytes);
-        result[safe_filename] = hash;
-        result["__hash__"] = hash;
+        result["meta"]["hash"] = hash;
+        result["entries"][safe_filename] = hash;
     }
     else if (fs::is_directory(targetPath)) {
         ThreadPool pool;
@@ -205,13 +205,14 @@ void run_generate_mode(const fs::path& targetPath, const std::string& selectedAl
     std::stringstream ss_time;
     ss_time << std::put_time(std::localtime(&now_time), "%Y-%m-%d %H:%M:%S");
 
-    result["__algo__"] = selectedAlgo;
-    result["__timestamp__"] = ss_time.str();
-    result["__total_files__"] = total_files;
-    result["__total_bytes__"] = total_bytes;
-    result["__target_type__"] = fs::is_regular_file(targetPath) ? "file" : "directory";
+    result["meta"]["version"] = 1;
+    result["meta"]["algo"] = selectedAlgo;
+    result["meta"]["timestamp"] = ss_time.str();
+    result["meta"]["total_files"] = total_files;
+    result["meta"]["total_bytes"] = total_bytes;
+    result["meta"]["target_type"] = fs::is_regular_file(targetPath) ? "file" : "directory";
 
-    std::cout << "\n✅ Final Hash (" << selectedAlgo << "): " << result["__hash__"].get<std::string>() << "\n";
+    std::cout << "\n✅ Final Hash (" << selectedAlgo << "): " << result["meta"]["hash"].get<std::string>() << "\n";
 
     if (exportJson) {
         fs::path outputPath = customOutputPath.empty()
