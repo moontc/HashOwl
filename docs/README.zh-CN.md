@@ -61,3 +61,54 @@ cmake --build out/build/x64-release
 - 1：参数错误
 - 2：运行时错误
 - 3：校验失败（存在修改或缺失）
+
+- ## 📚 示例
+
+### 1）计算单文件哈希（默认算法）
+
+```bash
+./out/build/x64-release/src/HashOwl.exe C:\path\to\file.txt
+```
+
+### 2）使用 SHA512 计算目录哈希
+
+```bash
+./out/build/x64-release/src/HashOwl.exe C:\path\to\folder --algo SHA512
+```
+
+### 3）计算并导出默认命名的 JSON
+
+```bash
+./out/build/x64-release/src/HashOwl.exe C:\path\to\folder -o
+```
+
+### 4）导出 JSON 到指定路径
+
+```bash
+./out/build/x64-release/src/HashOwl.exe C:\path\to\folder -o C:\custom\output\snapshot.json
+```
+
+### 5）使用快照校验目标
+
+```bash
+./out/build/x64-release/src/HashOwl.exe C:\path\to\folder --verify C:\path\to\folder_hashowl.json
+```
+
+---
+
+## 📄 校验输出示例
+
+```text
+📊 Verification Report:
+------------------------------------------------
+✅ Passed:    1042 files
+❌ Modified:  2 files
+   - config\settings.ini
+   - data\pagefile.sys [READ ERROR]
+⚠️ Missing:   1 files
+   - docs\old_readme.md
+🔍 Untracked: 5 files
+   - temp\new_cache.tmp
+------------------------------------------------
+⏱️ Total Time: 0.45 seconds
+```
