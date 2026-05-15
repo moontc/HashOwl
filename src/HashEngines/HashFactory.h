@@ -31,7 +31,8 @@ public:
         if (algoName == "CRC64") return std::make_unique<CrcEngine<uint64_t, 0xC96C5795D7870F42ULL>>();
 
         if (algoName == "CRC32C") {
-            if (supports_sse42()) {
+            static const bool sse42_supported = supports_sse42();
+            if (sse42_supported) {
                 return std::make_unique<SimdCrc32cEngine>();
             }
             else {
