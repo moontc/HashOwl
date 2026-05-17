@@ -62,6 +62,8 @@ static void print_help(const char* argv0) {
         "  --algo <algorithm>      Hash algorithm to use (default: CRC32)\n"
         "                          Supported: md5, sha1, sha256, sha384, sha512,\n"
         "                                     crc32, crc32c, crc64, blake3\n"
+        "  --jobs <auto|N>         Worker count for file hashing (default: auto)\n"
+        "                          auto = hardware concurrency\n"
         "  -o [output_path]        Export snapshot JSON (optional output path)\n"
         "  --verify, -v <snapshot> Verify against a previously generated snapshot\n"
         "  --help, -h              Show this help message\n"
@@ -73,10 +75,15 @@ static void print_help(const char* argv0) {
         "  3  Verification failed (modified or missing files)\n";
 }
 
+static size_t resolve_auto_jobs() {
+    size_t jobs = std::thread::hardware_concurrency();
+    return jobs == 0 ? 1 : jobs;
+}
+
 // =========================================================
 // Verify Mode
 // =========================================================
-bool run_verify_mode(const fs::path& targetPath, const fs::path& snapshotPath) {
+bool run_verify_mode(const fs::path& targetPath, const fs::path& snapshotPath, size_t jobs) {
     std::cout << "🔍 Verification Mode Initiated...\n";
 
     std::ifstream file(snapshotPath);
@@ -93,7 +100,7 @@ bool run_verify_mode(const fs::path& targetPath, const fs::path& snapshotPath) {
     auto ui_thread = create_ui_thread(bar, processed_bytes, total_bytes);
 
     auto start = std::chrono::high_resolution_clock::now();
-    ThreadPool pool;
+    ThreadPool pool(jobs);
     VerifyReport report;
 
     std::string target_type = snapshot.contains("meta") ? snapshot["meta"].value("target_type", "directory") : "directory";
@@ -136,7 +143,7 @@ bool run_verify_mode(const fs::path& targetPath, const fs::path& snapshotPath) {
 // =========================================================
 // Generate Mode
 // =========================================================
-void run_generate_mode(const fs::path& targetPath, const std::string& selectedAlgo, bool exportJson, const fs::path& customOutputPath) {
+void run_generate_mode(const fs::path& targetPath, const std::string& selectedAlgo, bool exportJson, const fs::path& customOutputPath, size_t jobs) {
     std::string safe_filename = main_path_to_utf8(targetPath.filename());
 
     std::cout << "⚙️ Algorithm: " << selectedAlgo << "\n";
@@ -186,7 +193,7 @@ void run_generate_mode(const fs::path& targetPath, const std::string& selectedAl
         result["entries"][safe_filename] = hash;
     }
     else if (fs::is_directory(targetPath)) {
-        ThreadPool pool;
+        ThreadPool pool(jobs);
         result = scan_directory(targetPath, selectedAlgo, processed_bytes, pool);
     }
 
@@ -243,6 +250,7 @@ int main(int argc, char* argv[]) {
     std::string targetPathStr = "";
     std::string selectedAlgo = "CRC32";
     bool exportJson = false;
+    std::string jobs_arg = "auto";
     std::string customOutputPathStr = "";
     std::string verifySnapshotPathStr = "";
 
@@ -254,6 +262,7 @@ int main(int argc, char* argv[]) {
             return 0;
         }
         else if (arg == "--algo" && i + 1 < argc && argv[i + 1][0] != '-') selectedAlgo = argv[++i];
+        else if (arg == "--jobs" && i + 1 < argc && argv[i + 1][0] != '-') jobs_arg = argv[++i];
         else if (arg == "-o") {
             exportJson = true;
             if (i + 1 < argc && argv[i + 1][0] != '-') customOutputPathStr = argv[++i];
@@ -279,15 +288,31 @@ int main(int argc, char* argv[]) {
 
     // 业务调度
     try {
+        size_t jobs = 0;
+        if (jobs_arg == "auto") {
+            jobs = resolve_auto_jobs();
+        }
+        else {
+            size_t pos = 0;
+            unsigned long parsed = std::stoul(jobs_arg, &pos, 10);
+            if (pos != jobs_arg.size() || parsed == 0) {
+                std::cerr << "❌ [ERROR] Invalid value for --jobs: " << jobs_arg << ". Use 'auto' or a positive integer.\n";
+                return 1;
+            }
+            jobs = static_cast<size_t>(parsed);
+        }
+
+        std::cout << "🧵 Worker Jobs: " << jobs << (jobs_arg == "auto" ? " (auto)\n" : " (manual)\n");
+
         if (!verifySnapshotPathStr.empty()) {
             fs::path snapshotPath = verifySnapshotPathStr;
             if (!fs::exists(snapshotPath)) throw std::runtime_error("Snapshot file not found: " + main_path_to_utf8(snapshotPath));
 
-            bool passed = run_verify_mode(targetPath, snapshotPath);
+            bool passed = run_verify_mode(targetPath, snapshotPath, jobs);
             return passed ? 0 : 3;
         }
         else {
-            run_generate_mode(targetPath, selectedAlgo, exportJson, customOutputPathStr);
+            run_generate_mode(targetPath, selectedAlgo, exportJson, customOutputPathStr, jobs);
             return 0;
         }
     }
