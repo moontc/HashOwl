@@ -4,7 +4,7 @@
 #include <vector>
 #include <atomic>
 #include "include/nlohmann/json.hpp"
-#include "ThreadPool.h"
+#include "../ThreadPool.h"
 
 // 用于存储校验结果的分类报告
 struct VerifyReport {

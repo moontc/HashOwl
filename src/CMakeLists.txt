@@ -14,7 +14,7 @@ add_library(hashowl-core STATIC
     "HashEngines/Blake3Engine.h"
     "Scanner/Scanner.h"
     "Scanner/Verifier.h"
-    "Scanner/ThreadPool.h"
+    "ThreadPool.h"
 )
 
 target_include_directories(hashowl-core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
