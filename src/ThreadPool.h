@@ -15,6 +15,10 @@ public:
     explicit ThreadPool(size_t threads = std::thread::hardware_concurrency())
         : stop(false)
     {
+        if (threads == 0) {
+            threads = 1;
+        }
+
         for (size_t i = 0; i < threads; ++i) {
             workers.emplace_back([this] {
                 for (;;) {
@@ -57,7 +61,7 @@ public:
             }
             tasks.emplace([task]() { (*task)(); });
         }
-        condition.notify_one(); // 唤醒一个空闲的工作线程
+        condition.notify_one();
         return res;
     }
 
