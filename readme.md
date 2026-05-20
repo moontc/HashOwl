@@ -9,7 +9,7 @@ It calculates hashes for files or whole directories, can export a JSON snapshot,
 
 ---
 
-## ✨ Key Features
+## Key Features
 
 - Fast multithreaded scanning for directories.
 - Supports both **single-file** and **directory-tree** hashing.
@@ -23,7 +23,7 @@ It calculates hashes for files or whole directories, can export a JSON snapshot,
 
 ---
 
-## ✅ Supported Algorithms
+## Supported Algorithms
 
 - `crc32` (default)
 - `crc32c` *(requires CPU SSE4.2 support at runtime)*
@@ -37,7 +37,7 @@ It calculates hashes for files or whole directories, can export a JSON snapshot,
 
 ---
 
-## 🧱 Build Requirements
+## Build Requirements
 
 Current tested setup:
 
@@ -50,7 +50,7 @@ Third-party dependencies include `nlohmann/json`, `indicators`, `blake3`, and `l
 
 ---
 
-## 🔨 Build
+## Build
 
 Use the CMake presets in this repository:
 
@@ -72,7 +72,7 @@ Additional presets are available in `CMakePresets.json` (for example `x86-debug`
 
 ---
 
-## 🛠️ Usage
+## Usage
 
 ```bash
 ./out/build/x64-release/src/HashOwl.exe <path> [--algo <md5|sha1|sha256|sha384|sha512|crc32|crc32c|crc64|blake3>] [-o [output_path]] [--verify <snapshot.json>]
@@ -97,7 +97,7 @@ Additional presets are available in `CMakePresets.json` (for example `x86-debug`
 
 ---
 
-## 📚 Examples
+## Examples
 
 ### 1) Hash a single file (default algorithm)
 
@@ -131,7 +131,7 @@ Additional presets are available in `CMakePresets.json` (for example `x86-debug`
 
 ---
 
-## 📄 Verification Output (Example)
+## Verification Output (Example)
 
 ```text
 📊 Verification Report:
