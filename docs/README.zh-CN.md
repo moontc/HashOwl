@@ -62,7 +62,7 @@ cmake --build out/build/x64-release
 - 2：运行时错误
 - 3：校验失败（存在修改或缺失）
 
-- ## 📚 示例
+- ## 示例
 
 ### 1）计算单文件哈希（默认算法）
 
@@ -96,7 +96,7 @@ cmake --build out/build/x64-release
 
 ---
 
-## 📄 校验输出示例
+## 校验输出示例
 
 ```text
 📊 Verification Report:
