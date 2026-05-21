@@ -84,7 +84,7 @@ static size_t resolve_auto_jobs() {
 // Verify Mode
 // =========================================================
 bool run_verify_mode(const fs::path& targetPath, const fs::path& snapshotPath, size_t jobs) {
-    std::cout << "🔍 Verification Mode Initiated...\n";
+    std::cout << "Verification mode initiated...\n";
 
     std::ifstream file(snapshotPath);
     json snapshot;
@@ -92,7 +92,7 @@ bool run_verify_mode(const fs::path& targetPath, const fs::path& snapshotPath, s
 
     uint64_t total_bytes = snapshot.contains("meta") ? snapshot["meta"].value("total_bytes", 0ULL) : 0ULL;
     std::string algo = snapshot.contains("meta") ? snapshot["meta"].value("algo", "Unknown") : "Unknown";
-    std::cout << "⚙️ Algorithm (From Snapshot): " << algo << "\n";
+    std::cout << "Algorithm (from snapshot): " << algo << "\n";
 
     std::atomic<uint64_t> processed_bytes{ 0 };
     ProgressBar bar;
@@ -118,24 +118,24 @@ bool run_verify_mode(const fs::path& targetPath, const fs::path& snapshotPath, s
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> diff = end - start;
 
-    std::cout << "\n\n📊 Verification Report:\n";
+    std::cout << "\n\nVerification Report:\n";
     std::cout << "------------------------------------------------\n";
-    std::cout << "✅ Passed:    " << report.passed.size() << " files\n";
+    std::cout << "Passed:    " << report.passed.size() << " files\n";
 
     if (!report.modified.empty()) {
-        std::cout << "❌ Modified:  " << report.modified.size() << " files\n";
+        std::cout << "Modified:  " << report.modified.size() << " files\n";
         for (const auto& f : report.modified) std::cout << "   - " << f << "\n";
     }
     if (!report.missing.empty()) {
-        std::cout << "⚠️ Missing:   " << report.missing.size() << " files\n";
+        std::cout << "Missing:   " << report.missing.size() << " files\n";
         for (const auto& f : report.missing) std::cout << "   - " << f << "\n";
     }
     if (!report.untracked.empty()) {
-        std::cout << "🔍 Untracked: " << report.untracked.size() << " files\n";
+        std::cout << "Untracked: " << report.untracked.size() << " files\n";
         for (const auto& f : report.untracked) std::cout << "   - " << f << "\n";
     }
     std::cout << "------------------------------------------------\n";
-    std::cout << "⏱️ Total Time: " << std::fixed << std::setprecision(2) << diff.count() << " seconds\n";
+    std::cout << "Total Time: " << std::fixed << std::setprecision(2) << diff.count() << " seconds\n";
 
     return report.modified.empty() && report.missing.empty();
 }
@@ -146,8 +146,8 @@ bool run_verify_mode(const fs::path& targetPath, const fs::path& snapshotPath, s
 void run_generate_mode(const fs::path& targetPath, const std::string& selectedAlgo, bool exportJson, const fs::path& customOutputPath, size_t jobs) {
     std::string safe_filename = main_path_to_utf8(targetPath.filename());
 
-    std::cout << "⚙️ Algorithm: " << selectedAlgo << "\n";
-    std::cout << "🚀 Indexing files... (Pre-flight scan)\n";
+    std::cout << "Algorithm: " << selectedAlgo << "\n";
+    std::cout << "Indexing files... (pre-flight scan)\n";
 
     uint64_t total_files = 0;
     uint64_t total_bytes = 0;
@@ -169,12 +169,12 @@ void run_generate_mode(const fs::path& targetPath, const std::string& selectedAl
     auto index_end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> index_ms = index_end - index_start;
 
-    std::cout << "✅ Found " << total_files << " files ("
+    std::cout << "Found " << total_files << " files ("
         << std::fixed << std::setprecision(2) << (total_bytes / (1024.0 * 1024.0))
         << " MB) in " << index_ms.count() << " ms.\n\n";
 
     if (total_files == 0) {
-        std::cout << "⚠️ No files to process. Exiting.\n";
+        std::cout << "No files to process. Exiting.\n";
         return;
     }
 
@@ -204,7 +204,7 @@ void run_generate_mode(const fs::path& targetPath, const std::string& selectedAl
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> diff = end - start;
-    std::cout << "⏱️ Total Time: " << std::fixed << std::setprecision(2) << diff.count() << " seconds\n";
+    std::cout << "Total Time: " << std::fixed << std::setprecision(2) << diff.count() << " seconds\n";
 
     // 写入元数据
     auto now = std::chrono::system_clock::now();
@@ -219,7 +219,7 @@ void run_generate_mode(const fs::path& targetPath, const std::string& selectedAl
     result["meta"]["total_bytes"] = total_bytes;
     result["meta"]["target_type"] = fs::is_regular_file(targetPath) ? "file" : "directory";
 
-    std::cout << "\n✅ Final Hash (" << selectedAlgo << "): " << result["meta"]["hash"].get<std::string>() << "\n";
+    std::cout << "\nFinal Hash (" << selectedAlgo << "): " << result["meta"]["hash"].get<std::string>() << "\n";
 
     if (exportJson) {
         fs::path outputPath = customOutputPath.empty()
@@ -229,10 +229,10 @@ void run_generate_mode(const fs::path& targetPath, const std::string& selectedAl
         std::ofstream outFile(outputPath);
         outFile << result.dump(4);
         outFile.close();
-        std::cout << "💾 JSON saved to: " << main_path_to_utf8(outputPath) << "\n";
+        std::cout << "JSON saved to: " << main_path_to_utf8(outputPath) << "\n";
     }
     else if (fs::is_directory(targetPath)) {
-        std::cout << "⚠️ JSON export skipped. (Use '-o' flag to save full tree to disk)\n";
+        std::cout << "JSON export skipped. (Use '-o' flag to save full tree to disk)\n";
     }
 }
 
@@ -244,7 +244,7 @@ int main(int argc, char* argv[]) {
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
-    std::cout << "🦉 HashOwl Started!\n";
+    std::cout << "HashOwl Started!\n";
     std::cout << "------------------------------------------------\n";
 
     std::string targetPathStr = "";
@@ -269,20 +269,20 @@ int main(int argc, char* argv[]) {
         }
         else if ((arg == "--verify" || arg == "-v") && i + 1 < argc && argv[i + 1][0] != '-') verifySnapshotPathStr = argv[++i];
         else if (arg.find("-") == 0) {
-            std::cerr << "❌ [ERROR] Unknown option: " << arg << "\n";
+            std::cerr << "[ERROR] Unknown option: " << arg << "\n";
             return 1;
         }
         else targetPathStr = arg;
     }
 
     if (targetPathStr.empty()) {
-        std::cerr << "❌ [ERROR] Missing target path.\n";
+        std::cerr << "[ERROR] Missing target path.\n";
         return 1;
     }
 
     fs::path targetPath = targetPathStr;
     if (!fs::exists(targetPath)) {
-        std::cerr << "❌ [ERROR] Path not found -> " << main_path_to_utf8(targetPath) << "\n";
+        std::cerr << "[ERROR] Path not found -> " << main_path_to_utf8(targetPath) << "\n";
         return 1;
     }
 
@@ -296,13 +296,13 @@ int main(int argc, char* argv[]) {
             size_t pos = 0;
             unsigned long parsed = std::stoul(jobs_arg, &pos, 10);
             if (pos != jobs_arg.size() || parsed == 0) {
-                std::cerr << "❌ [ERROR] Invalid value for --jobs: " << jobs_arg << ". Use 'auto' or a positive integer.\n";
+                std::cerr << "[ERROR] Invalid value for --jobs: " << jobs_arg << ". Use 'auto' or a positive integer.\n";
                 return 1;
             }
             jobs = static_cast<size_t>(parsed);
         }
 
-        std::cout << "🧵 Worker Jobs: " << jobs << (jobs_arg == "auto" ? " (auto)\n" : " (manual)\n");
+        std::cout << "Worker Jobs: " << jobs << (jobs_arg == "auto" ? " (auto)\n" : " (manual)\n");
 
         if (!verifySnapshotPathStr.empty()) {
             fs::path snapshotPath = verifySnapshotPathStr;
@@ -318,7 +318,7 @@ int main(int argc, char* argv[]) {
     }
     catch (const std::exception& e) {
         // 光标恢复由 ProgressBar 析构函数负责
-        std::cerr << "\n❌ [FATAL ERROR] " << e.what() << "\n";
+        std::cerr << "\n[FATAL ERROR] " << e.what() << "\n";
         return 2;
     }
 }
