@@ -1,4 +1,4 @@
-# 🦉 HashOwl 中文说明
+# HashOwl 中文说明
 
 [English README](../readme.md) | 简体中文
 
@@ -99,16 +99,16 @@ cmake --build out/build/x64-release
 ## 校验输出示例
 
 ```text
-📊 Verification Report:
+Verification Report:
 ------------------------------------------------
-✅ Passed:    1042 files
-❌ Modified:  2 files
+Passed:    1042 files
+Modified:  2 files
    - config\settings.ini
    - data\pagefile.sys [READ ERROR]
-⚠️ Missing:   1 files
+Missing:   1 files
    - docs\old_readme.md
-🔍 Untracked: 5 files
+Untracked: 5 files
    - temp\new_cache.tmp
 ------------------------------------------------
-⏱️ Total Time: 0.45 seconds
+Total Time: 0.45 seconds
 ```

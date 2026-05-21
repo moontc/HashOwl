@@ -1,4 +1,4 @@
-# 🦉 HashOwl
+# HashOwl
 
 English | [简体中文](docs/README.zh-CN.md)
 
@@ -134,16 +134,16 @@ Additional presets are available in `CMakePresets.json` (for example `x86-debug`
 ## Verification Output (Example)
 
 ```text
-📊 Verification Report:
+Verification Report:
 ------------------------------------------------
-✅ Passed:    1042 files
-❌ Modified:  2 files
+Passed:    1042 files
+Modified:  2 files
    - config\settings.ini
    - data\pagefile.sys [READ ERROR]
-⚠️ Missing:   1 files
+Missing:   1 files
    - docs\old_readme.md
-🔍 Untracked: 5 files
+Untracked: 5 files
    - temp\new_cache.tmp
 ------------------------------------------------
-⏱️ Total Time: 0.45 seconds
+Total Time: 0.45 seconds
 ```
