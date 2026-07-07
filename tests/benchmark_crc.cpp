@@ -4,7 +4,6 @@
 #include "CrcEngine.h"
 #include "LibDeflateCrc32Engine.h" 
 #include "BcryptEngine.h"
-#include "SimdCrc32cEngine.h"
 #include "Blake3Engine.h"
 
 const size_t BUFFER_SIZE = 100 * 1024 * 1024;
@@ -36,17 +35,6 @@ static void BM_LibDeflate_Crc32(benchmark::State& state) {
     state.SetBytesProcessed(state.iterations() * BUFFER_SIZE);
 }
 BENCHMARK(BM_LibDeflate_Crc32)->Unit(benchmark::kMillisecond);
-
-// SimdCrc32c
-static void BM_SimdCrc32c(benchmark::State& state) {
-    SimdCrc32cEngine engine;
-    for (auto _ : state) {
-        engine.update(ram_buffer.data(), ram_buffer.size());
-        benchmark::DoNotOptimize(engine);
-    }
-    state.SetBytesProcessed(state.iterations() * BUFFER_SIZE);
-}
-BENCHMARK(BM_SimdCrc32c)->Unit(benchmark::kMillisecond);
 
 // BcryptEngine_Sha256
 static void BM_BcryptEngine_Sha256(benchmark::State& state) {

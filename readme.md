@@ -26,7 +26,6 @@ It calculates hashes for files or whole directories, can export a JSON snapshot,
 ## Supported Algorithms
 
 - `crc32` (default)
-- `crc32c` *(requires CPU SSE4.2 support at runtime)*
 - `crc64`
 - `md5`
 - `sha1`
@@ -75,7 +74,7 @@ Additional presets are available in `CMakePresets.json` (for example `x86-debug`
 ## Usage
 
 ```bash
-./out/build/x64-release/src/HashOwl.exe <path> [--algo <md5|sha1|sha256|sha384|sha512|crc32|crc32c|crc64|blake3>] [-o [output_path]] [--verify <snapshot.json>]
+./out/build/x64-release/src/HashOwl.exe <path> [--algo <md5|sha1|sha256|sha384|sha512|crc32|crc64|blake3>] [-o [output_path]] [--verify <snapshot.json>]
 ```
 
 ### Options

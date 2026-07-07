@@ -61,7 +61,7 @@ static void print_help(const char* argv0) {
         "Options:\n"
         "  --algo <algorithm>      Hash algorithm to use (default: CRC32)\n"
         "                          Supported: md5, sha1, sha256, sha384, sha512,\n"
-        "                                     crc32, crc32c, crc64, blake3\n"
+        "                                     crc32, crc64, blake3\n"
         "  --jobs <auto|N>         Worker count for file hashing (default: auto)\n"
         "                          auto = hardware concurrency\n"
         "  -o [output_path]        Export snapshot JSON (optional output path)\n"

@@ -18,7 +18,6 @@ HashOwl 是一个使用现代 C++ 编写的高性能多线程命令行工具。
 ## 支持算法
 
 - crc32（默认）
-- crc32c（运行时需 CPU 支持 SSE4.2）
 - crc64
 - md5
 - sha1
@@ -47,7 +46,7 @@ cmake --build out/build/x64-release
 ## 基本用法
 
 ```bash
-./out/build/x64-release/src/HashOwl.exe <path> [--algo <md5|sha1|sha256|sha384|sha512|crc32|crc32c|crc64|blake3>] [-o [output_path]] [--verify <snapshot.json>]
+./out/build/x64-release/src/HashOwl.exe <path> [--algo <md5|sha1|sha256|sha384|sha512|crc32|crc64|blake3>] [-o [output_path]] [--verify <snapshot.json>]
 ```
 
 - `--algo`：指定算法，默认 CRC32。
