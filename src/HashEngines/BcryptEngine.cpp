@@ -1,43 +1,73 @@
 #include "BcryptEngine.h"
 #include <stdexcept>
 #include <vector>
-#include <cstdio>
+#include <map>
+#include <mutex>
 
 #ifdef _WIN32
 #include <windows.h>
 #include <bcrypt.h>
 #pragma comment(lib, "bcrypt.lib")
 
-BcryptEngine::BcryptEngine(const std::wstring& algoId) : hAlg(nullptr), hHash(nullptr), hashLength(0) {
-    // 1. Open the specific algorithm provider dynamically
-    if (BCryptOpenAlgorithmProvider((BCRYPT_ALG_HANDLE*)&hAlg, algoId.c_str(), NULL, 0) != 0) {
-        throw std::runtime_error("Failed to open algorithm provider");
-    }
+namespace {
 
-    // 2. Query the exact hash length for this algorithm
-    ULONG result = 0;
-    if (BCryptGetProperty((BCRYPT_ALG_HANDLE)hAlg, BCRYPT_HASH_LENGTH, (PUCHAR)&hashLength, sizeof(hashLength), &result, 0) != 0) {
-        throw std::runtime_error("Failed to query hash length from Bcrypt.");
-    }
+struct AlgProvider {
+    BCRYPT_ALG_HANDLE handle;
+    unsigned long hashLength;
+};
 
-    // 3. Create the hash object
-    if (BCryptCreateHash((BCRYPT_ALG_HANDLE)hAlg, (BCRYPT_HASH_HANDLE*)&hHash, NULL, 0, NULL, 0, 0) != 0) {
+// BCryptOpenAlgorithmProvider 是昂贵操作（注册表查找 + provider 解析），
+// 而 algorithm handle 是线程安全、可跨线程共享的，因此每种算法只打开一次，
+// 进程生命周期内常驻，退出时由系统统一回收。
+const AlgProvider& get_provider(const std::wstring& algoId) {
+    static std::mutex cache_mutex;
+    static std::map<std::wstring, AlgProvider> cache;
+
+    std::lock_guard<std::mutex> lock(cache_mutex);
+    auto it = cache.find(algoId);
+    if (it == cache.end()) {
+        AlgProvider provider{};
+        if (BCryptOpenAlgorithmProvider(&provider.handle, algoId.c_str(), NULL, 0) != 0) {
+            throw std::runtime_error("Failed to open algorithm provider");
+        }
+
+        ULONG result = 0;
+        if (BCryptGetProperty(provider.handle, BCRYPT_HASH_LENGTH, (PUCHAR)&provider.hashLength, sizeof(provider.hashLength), &result, 0) != 0) {
+            BCryptCloseAlgorithmProvider(provider.handle, 0);
+            throw std::runtime_error("Failed to query hash length from Bcrypt.");
+        }
+
+        it = cache.emplace(algoId, provider).first;
+    }
+    return it->second;
+}
+
+} // namespace
+
+BcryptEngine::BcryptEngine(const std::wstring& algoId) : hHash(nullptr), hashLength(0) {
+    const AlgProvider& provider = get_provider(algoId);
+    hashLength = provider.hashLength;
+
+    if (BCryptCreateHash(provider.handle, (BCRYPT_HASH_HANDLE*)&hHash, NULL, 0, NULL, 0, 0) != 0) {
         throw std::runtime_error("Failed to create hash");
     }
 }
 
 BcryptEngine::~BcryptEngine() {
     if (hHash) BCryptDestroyHash((BCRYPT_HASH_HANDLE)hHash);
-    if (hAlg) BCryptCloseAlgorithmProvider((BCRYPT_ALG_HANDLE)hAlg, 0);
 }
 
 void BcryptEngine::update(const char* data, size_t size) {
-    (void)BCryptHashData((BCRYPT_HASH_HANDLE)hHash, (PUCHAR)data, (ULONG)size, 0);
+    if (BCryptHashData((BCRYPT_HASH_HANDLE)hHash, (PUCHAR)data, (ULONG)size, 0) != 0) {
+        throw std::runtime_error("BCryptHashData failed");
+    }
 }
 
 std::string BcryptEngine::finalize() {
     std::vector<BYTE> hash(hashLength);
-    (void)BCryptFinishHash((BCRYPT_HASH_HANDLE)hHash, hash.data(), (ULONG)hash.size(), 0);
+    if (BCryptFinishHash((BCRYPT_HASH_HANDLE)hHash, hash.data(), (ULONG)hash.size(), 0) != 0) {
+        throw std::runtime_error("BCryptFinishHash failed");
+    }
 
     static const char hex_chars[] = "0123456789abcdef";
     std::string hexStr(hash.size() * 2, '0');

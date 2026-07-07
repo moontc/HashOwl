@@ -6,7 +6,6 @@
 
 class BcryptEngine : public IHashEngine {
 private:
-    void* hAlg;
     void* hHash;
     unsigned long hashLength; // We need to store the dynamic length of the hash (e.g., MD5 is 16, SHA256 is 32)
 
