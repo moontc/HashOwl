@@ -6,8 +6,25 @@
 #include <windows.h>
 #else
 #include <fstream>
-#include <vector>
 #endif
+
+#include <vector>
+
+namespace {
+
+// 每个 worker 线程复用同一块 8MB 缓冲区，避免每个文件都重新分配并清零
+// (std::vector<char> buffer(N) 是值初始化，海量小文件场景下每文件 memset 8MB 是主要开销)
+constexpr size_t FILE_BUFFER_SIZE = 8 * 1024 * 1024;
+
+std::vector<char>& get_thread_buffer() {
+    static thread_local std::vector<char> buffer;
+    if (buffer.size() < FILE_BUFFER_SIZE) {
+        buffer.resize(FILE_BUFFER_SIZE);
+    }
+    return buffer;
+}
+
+} // namespace
 
 std::string calculate_file_hash(const std::filesystem::path& filepath, std::unique_ptr<IHashEngine> engine, std::atomic<uint64_t>& processed_bytes) {
 
@@ -27,14 +44,13 @@ std::string calculate_file_hash(const std::filesystem::path& filepath, std::uniq
         return engine->finalize();
     }
 
-    // 直接开辟一块 8MB 的用户态物理缓冲区 (8MB 是经过验证的最契合现代 L3 缓存和 SSD 控制器的吞吐大小)
-    const DWORD BUFFER_SIZE = 8 * 1024 * 1024;
-    std::vector<char> buffer(BUFFER_SIZE);
+    // 8MB 是经过验证的最契合现代 L3 缓存和 SSD 控制器的吞吐大小
+    std::vector<char>& buffer = get_thread_buffer();
 
     DWORD bytesRead = 0;
     BOOL readResult = TRUE;
 
-    while ((readResult = ReadFile(hFile, buffer.data(), BUFFER_SIZE, &bytesRead, NULL)) && bytesRead > 0) {
+    while ((readResult = ReadFile(hFile, buffer.data(), static_cast<DWORD>(FILE_BUFFER_SIZE), &bytesRead, NULL)) && bytesRead > 0) {
 
         engine->update(buffer.data(), bytesRead);
 
@@ -52,8 +68,7 @@ std::string calculate_file_hash(const std::filesystem::path& filepath, std::uniq
     std::ifstream file(filepath, std::ios::binary);
     if (!file) throw std::runtime_error("Failed to open file: " + filepath.string());
 
-    constexpr size_t CHUNK_SIZE = 8 * 1024 * 1024;
-    std::vector<char> buffer(CHUNK_SIZE);
+    std::vector<char>& buffer = get_thread_buffer();
 
     while (file.read(buffer.data(), buffer.size()) || file.gcount() > 0) {
         engine->update(buffer.data(), file.gcount());
